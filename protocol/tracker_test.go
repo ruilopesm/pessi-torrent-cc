@@ -17,7 +17,7 @@ func TestPublishFileSerializationAndDeserialization(t *testing.T) {
 	original.Create("filename.txt", sha1.Sum([]byte("hello world")), chunkHashes)
 
 	// Serialize the PublishFile
-	serializedData, err := original.Serialize()
+	serializedData, err := Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
@@ -25,7 +25,7 @@ func TestPublishFileSerializationAndDeserialization(t *testing.T) {
 
 	// Deserialize the data back into a PublishFile
 	var deserialized PublishFile
-	err = deserialized.Deserialize(serializedData)
+	err = Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
 		return
@@ -54,7 +54,7 @@ func TestPublishChunkSerializationAndDeserialization(t *testing.T) {
 	original.Create(fileHash, bitfield)
 
 	// Serialize the PublishChunk
-	serializedData, err := original.Serialize()
+	serializedData, err := Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
@@ -62,7 +62,7 @@ func TestPublishChunkSerializationAndDeserialization(t *testing.T) {
 
 	// Deserialize the data back into a PublishChunk
 	var deserialized PublishChunk
-	err = deserialized.Deserialize(serializedData)
+	err = Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
 		return
@@ -95,7 +95,7 @@ func TestRequestFileSerializationAndDeserialization(t *testing.T) {
 	original.Create("example.txt")
 
 	// Serialize the RequestFile
-	serializedData, err := original.Serialize()
+	serializedData, err := Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
@@ -103,7 +103,7 @@ func TestRequestFileSerializationAndDeserialization(t *testing.T) {
 
 	// Deserialize the data back into a RequestFile
 	var deserialized RequestFile
-	err = deserialized.Deserialize(serializedData)
+	err = Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
 		return
@@ -122,7 +122,7 @@ func TestAlreadyExistsSerializationAndDeserialization(t *testing.T) {
 	original.Create("example.txt")
 
 	// Serialize the RequestFile
-	serializedData, err := original.Serialize()
+	serializedData, err := Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
@@ -130,7 +130,7 @@ func TestAlreadyExistsSerializationAndDeserialization(t *testing.T) {
 
 	// Deserialize the data back into a RequestFile
 	var deserialized AlreadyExists
-	err = deserialized.Deserialize(serializedData)
+	err = Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
 		return
@@ -152,7 +152,7 @@ func TestAnswerNodesSerializationAndDeserialization(t *testing.T) {
 	original.Create(42, nodeIdentifier, uint16(8081), bitfield)
 
 	// Serialize the AnswerNodes
-	serializedData, err := original.Serialize()
+	serializedData, err := Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
@@ -160,7 +160,7 @@ func TestAnswerNodesSerializationAndDeserialization(t *testing.T) {
 
 	// Deserialize the data back into an AnswerNodes
 	var deserialized AnswerNodes
-	err = deserialized.Deserialize(serializedData)
+	err = Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
 		return
