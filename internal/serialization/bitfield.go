@@ -1,6 +1,6 @@
-package protocol
+package serialization
 
-func encodeBitField(bitfield []uint8) []byte {
+func EncodeBitField(bitfield []uint8) []byte {
 	lastElement := bitfield[len(bitfield)-1]
 	var size int
 	size = (int(lastElement) / 8) + 1
@@ -8,7 +8,7 @@ func encodeBitField(bitfield []uint8) []byte {
 	binaryBitfield := make([]byte, size)
 
 	for value := range bitfield {
-		setBit(binaryBitfield, int(bitfield[value]))
+		SetBit(binaryBitfield, int(bitfield[value]))
 	}
 
 	return binaryBitfield
@@ -19,7 +19,7 @@ func decodeBitField(binaryBitfield []byte) []uint8 {
 	size := len(binaryBitfield)
 
 	for i := 0; i < size*8; i++ {
-		if getBit(binaryBitfield, i) {
+		if GetBit(binaryBitfield, i) {
 			bitfield = append(bitfield, uint8(i))
 		}
 	}
@@ -27,8 +27,8 @@ func decodeBitField(binaryBitfield []byte) []uint8 {
 	return bitfield
 }
 
-// // setBit sets the bit at the specified position to 1 (starting at 0).
-func setBit(bitfield []byte, position int) {
+// // SetBit sets the bit at the specified position to 1 (starting at 0).
+func SetBit(bitfield []byte, position int) {
 	offset := int(position / 8)
 	value := bitfield[offset]
 	index := position - (8 * offset)
@@ -39,7 +39,7 @@ func setBit(bitfield []byte, position int) {
 }
 
 // // GetBit returns true if the bit value at a given position in the bitfield is set to 1 (starting at 0)
-func getBit(bitfield []byte, position int) bool {
+func GetBit(bitfield []byte, position int) bool {
 	offset := int(position / 8)
 	value := bitfield[offset]
 	index := position - (8 * offset)

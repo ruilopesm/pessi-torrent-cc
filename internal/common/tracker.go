@@ -1,6 +1,7 @@
-package protocol
+package common
 
 import (
+	"PessiTorrent/internal/serialization"
 	"bytes"
 )
 
@@ -31,11 +32,11 @@ func (pf *PublishFile) Create(name string, fileHash [20]byte, chunkHashes [][20]
 }
 
 func (pf *PublishFile) ReadString(reader *bytes.Reader) error {
-	return ReadStringCallback(reader, &pf.FileName, int(pf.NameSize))
+	return serialization.ReadStringCallback(reader, &pf.FileName, int(pf.NameSize))
 }
 
 func (pf *PublishFile) ReadSliceOfSliceByte20(reader *bytes.Reader) error {
-	return ReadSliceOfSliceByte20Callback(reader, &pf.ChunkHashes, int(pf.NumberOfChunks))
+	return serialization.ReadSliceOfSliceByte20Callback(reader, &pf.ChunkHashes, int(pf.NumberOfChunks))
 }
 
 type PublishChunk struct {
@@ -47,7 +48,7 @@ type PublishChunk struct {
 }
 
 func (pc *PublishChunk) Create(fileHash [20]byte, bitfield []uint8) {
-	binaryBitField := encodeBitField(bitfield)
+	binaryBitField := serialization.EncodeBitField(bitfield)
 	bitfieldSize := len(binaryBitField)
 
 	pc.Type = uint8(publishChunkType)
@@ -58,7 +59,7 @@ func (pc *PublishChunk) Create(fileHash [20]byte, bitfield []uint8) {
 }
 
 func (pc *PublishChunk) ReadSliceByte(reader *bytes.Reader) error {
-	return ReadSliceByteCallback(reader, &pc.Bitfield, int(pc.BitfieldSize))
+	return serialization.ReadSliceByteCallback(reader, &pc.Bitfield, int(pc.BitfieldSize))
 }
 
 type RequestFile struct {
@@ -76,7 +77,7 @@ func (rf *RequestFile) Create(fileName string) {
 }
 
 func (rf *RequestFile) ReadString(reader *bytes.Reader) error {
-	return ReadStringCallback(reader, &rf.FileName, int(rf.NameSize))
+	return serialization.ReadStringCallback(reader, &rf.FileName, int(rf.NameSize))
 }
 
 // // TRACKER -> NODE
@@ -96,32 +97,32 @@ func (ae *AlreadyExists) Create(fileName string) {
 }
 
 func (ae *AlreadyExists) ReadString(reader *bytes.Reader) error {
-	return ReadStringCallback(reader, &ae.FileName, int(ae.NameSize))
+	return serialization.ReadStringCallback(reader, &ae.FileName, int(ae.NameSize))
 }
 
 type AnswerNodes struct {
 	Type           uint8
 	SequenceNumber uint8
 	BitfieldSize   uint16
-  Reserved uint16
+	Reserved       uint16
 	NodeIdentifier [4]byte
 	NodePort       uint16
 	Bitfield       []byte
 }
 
 func (an *AnswerNodes) Create(sequenceNumber uint8, nodeIdentifier [4]byte, nodePort uint16, bitfield []uint8) {
-	binaryBitField := encodeBitField(bitfield)
+	binaryBitField := serialization.EncodeBitField(bitfield)
 	bitfieldSize := len(binaryBitField)
 
 	an.Type = uint8(answerNodesType)
 	an.SequenceNumber = sequenceNumber
 	an.BitfieldSize = uint16(bitfieldSize)
-  an.Reserved = uint16(0)
+	an.Reserved = uint16(0)
 	an.NodeIdentifier = nodeIdentifier
 	an.NodePort = nodePort
 	an.Bitfield = binaryBitField
 }
 
 func (an *AnswerNodes) ReadSliceByte(reader *bytes.Reader) error {
-	return ReadSliceByteCallback(reader, &an.Bitfield, int(an.BitfieldSize))
+	return serialization.ReadSliceByteCallback(reader, &an.Bitfield, int(an.BitfieldSize))
 }

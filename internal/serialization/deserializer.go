@@ -1,4 +1,4 @@
-package protocol
+package serialization
 
 import (
 	"bytes"
@@ -21,7 +21,7 @@ type SliceByteReader interface {
 
 func Deserialize(data []byte, struc interface{}) error {
 	if reflect.ValueOf(struc).Kind() != reflect.Ptr || reflect.Indirect(reflect.ValueOf(struc)).Kind() != reflect.Struct {
-		return fmt.Errorf("Input is not a pointer to a struct")
+		return fmt.Errorf("input is not a pointer to a struct")
 	}
 
 	reader := bytes.NewReader(data)
@@ -36,7 +36,7 @@ func Deserialize(data []byte, struc interface{}) error {
 				return err
 			}
 		} else {
-			return fmt.Errorf("Unable to set value in field")
+			return fmt.Errorf("unable to set value in field")
 		}
 	}
 
@@ -60,7 +60,7 @@ func deserializeField(reader *bytes.Reader, data interface{}, struc interface{})
 	case *[]byte:
 		return readStructSliceByte(reader, struc)
 	default:
-		return fmt.Errorf("Unsupported data type: %T", data)
+		return fmt.Errorf("unsupported data type: %T", data)
 	}
 }
 
