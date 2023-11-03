@@ -9,7 +9,7 @@ import (
 
 func Serialize(struc interface{}) ([]byte, error) {
 	if reflect.ValueOf(struc).Kind() != reflect.Struct {
-		return nil, fmt.Errorf("Input is not of type Struct")
+		return nil, fmt.Errorf("input is not of type Struct")
 	}
 
 	buf := new(bytes.Buffer)
@@ -24,7 +24,7 @@ func Serialize(struc interface{}) ([]byte, error) {
 				return nil, err
 			}
 		} else {
-			return nil, fmt.Errorf("Enable to interface with field")
+			return nil, fmt.Errorf("enable to interface with field")
 		}
 	}
 
@@ -48,7 +48,7 @@ func serializeField(buf *bytes.Buffer, data interface{}) error {
 	case string:
 		return writeString(buf, data.(string))
 	default:
-		return fmt.Errorf("Unsupported data type: %T", data)
+		return fmt.Errorf("unsupported data type: %T", data)
 	}
 }
 
@@ -80,7 +80,7 @@ func writeSliceByte20(buf *bytes.Buffer, data [20]byte) error {
 func writeSliceOfSliceByte20(buf *bytes.Buffer, data [][20]byte) error {
 	for i := 0; i < len(data); i++ {
 		if err := binary.Write(buf, binary.BigEndian, data[i]); err != nil {
-			return fmt.Errorf("Error serializing output of type [][20]byte")
+			return fmt.Errorf("error serializing output of type [][20]byte")
 		}
 	}
 	return nil

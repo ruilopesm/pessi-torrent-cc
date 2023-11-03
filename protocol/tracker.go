@@ -103,7 +103,7 @@ type AnswerNodes struct {
 	Type           uint8
 	SequenceNumber uint8
 	BitfieldSize   uint16
-  Reserved uint16
+	Reserved       uint16
 	NodeIdentifier [4]byte
 	NodePort       uint16
 	Bitfield       []byte
@@ -116,7 +116,7 @@ func (an *AnswerNodes) Create(sequenceNumber uint8, nodeIdentifier [4]byte, node
 	an.Type = uint8(answerNodesType)
 	an.SequenceNumber = sequenceNumber
 	an.BitfieldSize = uint16(bitfieldSize)
-  an.Reserved = uint16(0)
+	an.Reserved = uint16(0)
 	an.NodeIdentifier = nodeIdentifier
 	an.NodePort = nodePort
 	an.Bitfield = binaryBitField
