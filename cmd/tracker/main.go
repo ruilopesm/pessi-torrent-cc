@@ -1,6 +1,8 @@
 package main
 
 import (
+	"PessiTorrent/internal/common"
+	"PessiTorrent/internal/serialization"
 	"fmt"
 	"net"
 )
@@ -18,8 +20,16 @@ func handleClient(conn net.Conn) {
 		}
 
 		data := buf[:n]
+
 		message := string(data)
 		fmt.Printf("Received: %s\n", message)
+
+		packetType := uint(data[0])
+		packet := common.PacketStructFromPacketType(packetType)
+		if err = serialization.Deserialize(data, packet); err != nil {
+			fmt.Printf("couldn't deserialize struct from %s\n", message)
+			continue
+		}
 
 		// Process the received message (custom protocol logic)
 		response := "Server received: " + message

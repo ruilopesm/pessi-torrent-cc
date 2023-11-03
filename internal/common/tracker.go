@@ -11,6 +11,23 @@ const publishChunkType = 3
 const requestFileType = 4
 const answerNodesType = 5
 
+func PacketStructFromPacketType(packetType uint) interface{} {
+	switch packetType {
+	case publishFileType:
+		return PublishFilePacket{Type: publishFileType}
+	case alreadyExistsType:
+		return AlreadyExistsPacket{Type: alreadyExistsType}
+	case publishChunkType:
+		return PublishChunkPacket{Type: publishChunkType}
+	case requestFileType:
+		return RequestFilePacket{Type: requestFileType}
+	case answerNodesType:
+		return AnswerNodesPacket{Type: answerNodesType}
+	default:
+		return nil
+	}
+}
+
 // NODE -> TRACKER
 
 type PublishFilePacket struct {
