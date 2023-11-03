@@ -10,7 +10,7 @@ ifeq ($(REMOTE), 1)
 	GOCMD = GOARCH=amd64 GOOS=linux go
 endif
 
-.PHONY: all build tracker node clean help
+.PHONY: all build tracker node format test clean help
 
 all: help
 
@@ -26,6 +26,14 @@ node:
 	@$(GOCMD) build -o out/bin/node ./$(NODE_FOLDER)
 	@echo "${GREEN}Successfully built ${RESET}${RED}node${RESET}"
 
+test:
+	@$(GOCMD) test ./...
+	@echo "${GREEN}Successfully ran tests${RESET}"
+
+format:
+	@$(GOCMD) fmt ./...
+	@echo "${GREEN}Successfully formatted project${RESET}"
+
 clean:
 	@rm -rf out
 	@echo "${GREEN}Successfully cleaned project${RESET}"
@@ -38,5 +46,9 @@ help:
 	@echo ""
 	@echo "${YELLOW}Available Commands:${RESET}"
 	@echo "  build       Builds the project"
+	@echo "  tracker     Builds the tracker"
+	@echo "  node        Builds the node"
+	@echo "  format      Formats the project"
+	@echo "  test        Runs the tests"
 	@echo "  clean       Cleans the project"
 	@echo "  help        Help about any command"
