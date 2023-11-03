@@ -1,3 +1,3 @@
-module github.com/ruilopesm/PessiTorrent-CC
+module PessiTorrent
 
 go 1.21.1

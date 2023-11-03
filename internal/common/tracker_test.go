@@ -1,6 +1,7 @@
-package protocol
+package common
 
 import (
+	"PessiTorrent/internal/serialization"
 	"crypto/sha1"
 	"testing"
 )
@@ -17,7 +18,7 @@ func TestPublishFileSerializationAndDeserialization(t *testing.T) {
 	original.Create("filename.txt", sha1.Sum([]byte("hello world")), chunkHashes)
 
 	// Serialize the PublishFile
-	serializedData, err := Serialize(original)
+	serializedData, err := serialization.Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
@@ -25,7 +26,7 @@ func TestPublishFileSerializationAndDeserialization(t *testing.T) {
 
 	// Deserialize the data back into a PublishFile
 	var deserialized PublishFile
-	err = Deserialize(serializedData, &deserialized)
+	err = serialization.Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
 		return
@@ -54,7 +55,7 @@ func TestPublishChunkSerializationAndDeserialization(t *testing.T) {
 	original.Create(fileHash, bitfield)
 
 	// Serialize the PublishChunk
-	serializedData, err := Serialize(original)
+	serializedData, err := serialization.Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
@@ -62,7 +63,7 @@ func TestPublishChunkSerializationAndDeserialization(t *testing.T) {
 
 	// Deserialize the data back into a PublishChunk
 	var deserialized PublishChunk
-	err = Deserialize(serializedData, &deserialized)
+	err = serialization.Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
 		return
@@ -95,7 +96,7 @@ func TestRequestFileSerializationAndDeserialization(t *testing.T) {
 	original.Create("example.txt")
 
 	// Serialize the RequestFile
-	serializedData, err := Serialize(original)
+	serializedData, err := serialization.Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
@@ -103,7 +104,7 @@ func TestRequestFileSerializationAndDeserialization(t *testing.T) {
 
 	// Deserialize the data back into a RequestFile
 	var deserialized RequestFile
-	err = Deserialize(serializedData, &deserialized)
+	err = serialization.Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
 		return
@@ -122,7 +123,7 @@ func TestAlreadyExistsSerializationAndDeserialization(t *testing.T) {
 	original.Create("example.txt")
 
 	// Serialize the RequestFile
-	serializedData, err := Serialize(original)
+	serializedData, err := serialization.Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
@@ -130,7 +131,7 @@ func TestAlreadyExistsSerializationAndDeserialization(t *testing.T) {
 
 	// Deserialize the data back into a RequestFile
 	var deserialized AlreadyExists
-	err = Deserialize(serializedData, &deserialized)
+	err = serialization.Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
 		return
@@ -152,7 +153,7 @@ func TestAnswerNodesSerializationAndDeserialization(t *testing.T) {
 	original.Create(42, nodeIdentifier, uint16(8081), bitfield)
 
 	// Serialize the AnswerNodes
-	serializedData, err := Serialize(original)
+	serializedData, err := serialization.Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
@@ -160,7 +161,7 @@ func TestAnswerNodesSerializationAndDeserialization(t *testing.T) {
 
 	// Deserialize the data back into an AnswerNodes
 	var deserialized AnswerNodes
-	err = Deserialize(serializedData, &deserialized)
+	err = serialization.Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
 		return
@@ -197,18 +198,18 @@ func TestAnswerNodesSerializationAndDeserialization(t *testing.T) {
 func TestSetBitsAndGetBit(t *testing.T) {
 	bitfield := make([]uint8, 10)
 
-	setBit(bitfield, 0)
-	if getBit(bitfield, 0) == false {
+	serialization.SetBit(bitfield, 0)
+	if serialization.GetBit(bitfield, 0) == false {
 		t.Error("Bit in position 0 not set to 1")
 	}
 
-	setBit(bitfield, 5)
-	if getBit(bitfield, 5) == false {
+	serialization.SetBit(bitfield, 5)
+	if serialization.GetBit(bitfield, 5) == false {
 		t.Error("Bit in position 5 not set to 1")
 	}
 
-	setBit(bitfield, 10)
-	if getBit(bitfield, 10) == false {
+	serialization.SetBit(bitfield, 10)
+	if serialization.GetBit(bitfield, 10) == false {
 		t.Error("Bit in position 10 not set to 1")
 	}
 }
