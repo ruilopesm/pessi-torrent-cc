@@ -7,25 +7,25 @@ import (
 )
 
 func TestPublishFileSerializationAndDeserialization(t *testing.T) {
-	// Create a sample PublishFile instance
+	// Create a sample PublishFilePacket instance
 
 	chunkHashes := [][20]byte{
 		sha1.Sum([]byte("chico")),
 		sha1.Sum([]byte("daniel")),
 		sha1.Sum([]byte("rui")),
 	}
-	var original PublishFile
+	var original PublishFilePacket
 	original.Create("filename.txt", sha1.Sum([]byte("hello world")), chunkHashes)
 
-	// Serialize the PublishFile
+	// Serialize the PublishFilePacket
 	serializedData, err := serialization.Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
 	}
 
-	// Deserialize the data back into a PublishFile
-	var deserialized PublishFile
+	// Deserialize the data back into a PublishFilePacket
+	var deserialized PublishFilePacket
 	err = serialization.Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
@@ -47,22 +47,22 @@ func TestPublishFileSerializationAndDeserialization(t *testing.T) {
 }
 
 func TestPublishChunkSerializationAndDeserialization(t *testing.T) {
-	// Create a sample PublishChunk instance
+	// Create a sample PublishChunkPacket instance
 	fileHash := sha1.Sum([]byte("example"))
 	bitfield := []uint8{0, 2, 7, 10}
 
-	var original PublishChunk
+	var original PublishChunkPacket
 	original.Create(fileHash, bitfield)
 
-	// Serialize the PublishChunk
+	// Serialize the PublishChunkPacket
 	serializedData, err := serialization.Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
 	}
 
-	// Deserialize the data back into a PublishChunk
-	var deserialized PublishChunk
+	// Deserialize the data back into a PublishChunkPacket
+	var deserialized PublishChunkPacket
 	err = serialization.Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
@@ -91,19 +91,19 @@ func TestPublishChunkSerializationAndDeserialization(t *testing.T) {
 }
 
 func TestRequestFileSerializationAndDeserialization(t *testing.T) {
-	// Create a sample RequestFile instance
-	var original RequestFile
+	// Create a sample RequestFilePacket instance
+	var original RequestFilePacket
 	original.Create("example.txt")
 
-	// Serialize the RequestFile
+	// Serialize the RequestFilePacket
 	serializedData, err := serialization.Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
 	}
 
-	// Deserialize the data back into a RequestFile
-	var deserialized RequestFile
+	// Deserialize the data back into a RequestFilePacket
+	var deserialized RequestFilePacket
 	err = serialization.Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
@@ -118,19 +118,19 @@ func TestRequestFileSerializationAndDeserialization(t *testing.T) {
 }
 
 func TestAlreadyExistsSerializationAndDeserialization(t *testing.T) {
-	// Create a sample RequestFile instance
-	var original AlreadyExists
+	// Create a sample RequestFilePacket instance
+	var original AlreadyExistsPacket
 	original.Create("example.txt")
 
-	// Serialize the RequestFile
+	// Serialize the RequestFilePacket
 	serializedData, err := serialization.Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
 	}
 
-	// Deserialize the data back into a RequestFile
-	var deserialized AlreadyExists
+	// Deserialize the data back into a RequestFilePacket
+	var deserialized AlreadyExistsPacket
 	err = serialization.Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
@@ -145,22 +145,22 @@ func TestAlreadyExistsSerializationAndDeserialization(t *testing.T) {
 }
 
 func TestAnswerNodesSerializationAndDeserialization(t *testing.T) {
-	// Create a sample AnswerNodes instance
+	// Create a sample AnswerNodesPacket instance
 	bitfield := []uint8{0, 2, 7, 10}
 	nodeIdentifier := [4]byte{128, 1, 1, 1}
 
-	var original AnswerNodes
+	var original AnswerNodesPacket
 	original.Create(42, nodeIdentifier, uint16(8081), bitfield)
 
-	// Serialize the AnswerNodes
+	// Serialize the AnswerNodesPacket
 	serializedData, err := serialization.Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
 		return
 	}
 
-	// Deserialize the data back into an AnswerNodes
-	var deserialized AnswerNodes
+	// Deserialize the data back into an AnswerNodesPacket
+	var deserialized AnswerNodesPacket
 	err = serialization.Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
