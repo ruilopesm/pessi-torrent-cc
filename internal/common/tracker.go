@@ -14,15 +14,15 @@ const answerNodesType = 5
 func PacketStructFromPacketType(packetType uint) interface{} {
 	switch packetType {
 	case publishFileType:
-		return PublishFilePacket{Type: publishFileType}
+		return &PublishFilePacket{}
 	case alreadyExistsType:
-		return AlreadyExistsPacket{Type: alreadyExistsType}
+		return &AlreadyExistsPacket{}
 	case publishChunkType:
-		return PublishChunkPacket{Type: publishChunkType}
+		return &PublishChunkPacket{}
 	case requestFileType:
-		return RequestFilePacket{Type: requestFileType}
+		return &RequestFilePacket{}
 	case answerNodesType:
-		return AnswerNodesPacket{Type: answerNodesType}
+		return &AnswerNodesPacket{}
 	default:
 		return nil
 	}

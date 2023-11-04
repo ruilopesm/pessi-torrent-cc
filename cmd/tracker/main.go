@@ -13,50 +13,39 @@ func handleClient(conn net.Conn) {
 	buf := make([]byte, 1024)
 
 	for {
-		n, err := conn.Read(buf)
+		_, err := conn.Read(buf)
 		if err != nil {
-			fmt.Println("Connection closed.")
+			fmt.Println("client disconnected")
 			return
 		}
 
-		data := buf[:n]
-
-		message := string(data)
-		fmt.Printf("Received: %s\n", message)
-
-		packetType := uint(data[0])
+		packetType := uint(buf[0])
 		packet := common.PacketStructFromPacketType(packetType)
-		if err = serialization.Deserialize(data, packet); err != nil {
-			fmt.Printf("couldn't deserialize struct from %s\n", message)
+		err = serialization.Deserialize(buf, packet)
+		if err != nil {
+			fmt.Printf("couldn't deserialize struct from %s\n", buf)
 			continue
 		}
 
-		// Process the received message (custom protocol logic)
-		response := "Server received: " + message
-
-		_, err = conn.Write([]byte(response))
-		if err != nil {
-			fmt.Println("Error writing to client:", err)
-			return
-		}
+		fmt.Println("deserialized packet:", packet)
 	}
 }
 
 func main() {
-	port := "8081"
-	listen, err := net.Listen("tcp", ":"+port)
+	listen, err := net.Listen("tcp", "localhost:8081")
 	if err != nil {
-		fmt.Println("Error listening:", err)
+		fmt.Println("error listening:", err)
 		return
 	}
+
 	defer listen.Close()
 
-	fmt.Println("Server listening on port " + port)
+	fmt.Println("server listening on port 8081")
 
 	for {
 		conn, err := listen.Accept()
 		if err != nil {
-			fmt.Println("Error accepting connection:", err)
+			fmt.Println("error accepting connection:", err)
 			continue
 		}
 
