@@ -1,50 +1,46 @@
 package main
 
 import (
+	"PessiTorrent/internal/common"
+	"PessiTorrent/internal/serialization"
 	"fmt"
 	"net"
 	"os"
 )
 
-func sendMessage(conn net.Conn, message string) (string, error) {
-	_, err := conn.Write([]byte(message))
+func sendMessage(conn net.Conn, message []byte) error {
+	_, err := conn.Write(message)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	fmt.Println("Sent:", message)
+	fmt.Println("sent bytes: ", message)
 
-	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
-	if err != nil {
-		return "", err
-	}
-
-	response := string(buf[:n])
-	return response, nil
+	return nil
 }
 
 func main() {
-	// serverAddr := "localhost:8081"
-	address := os.Args[1]
-	port := os.Args[2]
-	serverAddr := address + ":" + port
-
-	conn, err := net.Dial("tcp", serverAddr)
+	conn, err := net.Dial("tcp", "localhost:8081")
 
 	if err != nil {
-		fmt.Println("Error connecting to the server:", err)
+		fmt.Println("error connecting to the server:", err)
 		os.Exit(1)
 	}
+
 	defer conn.Close()
 
-	message := "HELLO WORLD"
+	var message common.RequestFilePacket
+	message.Create("example.txt")
 
-	response, err := sendMessage(conn, message)
+	serializedMessage, err := serialization.Serialize(message)
 	if err != nil {
-		fmt.Println("Error sending or receiving data:", err)
+		fmt.Println("error serializing the message:", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("Received:", response)
+	err = sendMessage(conn, serializedMessage)
+	if err != nil {
+		fmt.Println("error sending the message:", err)
+		os.Exit(1)
+	}
 }

@@ -14,12 +14,12 @@ func TestPublishFileSerializationAndDeserialization(t *testing.T) {
 		sha1.Sum([]byte("daniel")),
 		sha1.Sum([]byte("rui")),
 	}
-  
+
 	var original PublishFilePacket
 	original.Create("filename.txt", sha1.Sum([]byte("hello world")), chunkHashes)
 
 	// Serialize the PublishFilePacket
-  
+
 	serializedData, err := serialization.Serialize(original)
 	if err != nil {
 		t.Errorf("Serialization error: %v", err)
@@ -28,7 +28,7 @@ func TestPublishFileSerializationAndDeserialization(t *testing.T) {
 
 	// Deserialize the data back into a PublishFilePacket
 	var deserialized PublishFilePacket
-  
+
 	err = serialization.Deserialize(serializedData, &deserialized)
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
@@ -108,7 +108,7 @@ func TestRequestFileSerializationAndDeserialization(t *testing.T) {
 	// Deserialize the data back into a RequestFilePacket
 	var deserialized RequestFilePacket
 	err = serialization.Deserialize(serializedData, &deserialized)
-  
+
 	if err != nil {
 		t.Errorf("Deserialization error: %v", err)
 		return
