@@ -1,54 +1,93 @@
 package main
 
 import (
-	"PessiTorrent/internal/common"
-	"PessiTorrent/internal/serialization"
+	"PessiTorrent/internal/connection"
 	"fmt"
+	"log"
 	"net"
+	"sync"
 )
 
-func handleClient(conn net.Conn) {
+type Tracker struct {
+	listenAddr string
+	ln         net.Listener
+	peerMap    SynchronizedMap
+	quitch     chan struct{}
+}
+
+type SynchronizedMap struct {
+	m map[net.Addr]*connection.Connection
+	sync.RWMutex
+}
+
+func NewTracker(listenAddr string) *Tracker {
+	return &Tracker{
+		listenAddr: listenAddr,
+		peerMap:    SynchronizedMap{m: make(map[net.Addr]*connection.Connection)},
+		quitch:     make(chan struct{}),
+	}
+}
+
+func (t *Tracker) Start() error {
+	ln, err := net.Listen("tcp", t.listenAddr)
+	if err != nil {
+		return err
+	}
+	defer ln.Close()
+
+	t.ln = ln
+
+	go t.acceptLoop()
+
+	<-t.quitch
+
+	return nil
+}
+
+func (t *Tracker) acceptLoop() {
+	for {
+		c, err := t.ln.Accept()
+		if err != nil {
+			fmt.Println("accept error: ", err)
+			continue
+		}
+		conn := connection.NewConnection(c)
+		fmt.Printf("node %s connected\n", conn.RemoteAddr())
+		go t.handleConnection(conn)
+	}
+}
+
+func (t *Tracker) handleConnection(conn *connection.Connection) {
+	t.peerMap.Lock()
+	t.peerMap.m[conn.RemoteAddr()] = conn
+	t.peerMap.Unlock()
+
+	t.readLoop(conn)
+}
+
+func (t *Tracker) readLoop(conn *connection.Connection) {
 	defer conn.Close()
 
-	buf := make([]byte, 1024)
-
 	for {
-		_, err := conn.Read(buf)
+		packet, err := conn.ReadPacket()
 		if err != nil {
-			fmt.Println("client disconnected")
+			if err.Error() != "EOF" {
+				fmt.Println("read error: ", err)
+			} else {
+				fmt.Printf("node %s disconnected\n", conn.RemoteAddr())
+			}
+
 			return
 		}
 
-		packetType := uint(buf[0])
-		packet := common.PacketStructFromPacketType(packetType)
-		err = serialization.Deserialize(buf, packet)
-		if err != nil {
-			fmt.Printf("couldn't deserialize struct from %s\n", buf)
-			continue
-		}
-
-		fmt.Println("deserialized packet:", packet)
+		fmt.Println("packet received: ", packet)
 	}
 }
 
 func main() {
-	listen, err := net.Listen("tcp", "localhost:8081")
+	tracker := NewTracker(":8080")
+	err := tracker.Start()
 	if err != nil {
-		fmt.Println("error listening:", err)
-		return
-	}
-
-	defer listen.Close()
-
-	fmt.Println("server listening on port 8081")
-
-	for {
-		conn, err := listen.Accept()
-		if err != nil {
-			fmt.Println("error accepting connection:", err)
-			continue
-		}
-
-		go handleClient(conn)
+		log.Fatal(err)
 	}
 }

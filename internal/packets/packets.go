@@ -1,32 +1,9 @@
-package common
+package packets
 
 import (
 	"PessiTorrent/internal/serialization"
 	"bytes"
 )
-
-const publishFileType = 1
-const alreadyExistsType = 2
-const publishChunkType = 3
-const requestFileType = 4
-const answerNodesType = 5
-
-func PacketStructFromPacketType(packetType uint) interface{} {
-	switch packetType {
-	case publishFileType:
-		return &PublishFilePacket{}
-	case alreadyExistsType:
-		return &AlreadyExistsPacket{}
-	case publishChunkType:
-		return &PublishChunkPacket{}
-	case requestFileType:
-		return &RequestFilePacket{}
-	case answerNodesType:
-		return &AnswerNodesPacket{}
-	default:
-		return nil
-	}
-}
 
 // NODE -> TRACKER
 
@@ -40,7 +17,7 @@ type PublishFilePacket struct {
 }
 
 func (pf *PublishFilePacket) Create(name string, fileHash [20]byte, chunkHashes [][20]byte) {
-	pf.Type = uint8(publishFileType)
+	pf.Type = uint8(PUBLISH_FILE_TYPE)
 	pf.NameSize = uint8(len(name))
 	pf.NumberOfChunks = uint16(len(chunkHashes))
 	pf.FileHash = fileHash
@@ -68,7 +45,7 @@ func (pc *PublishChunkPacket) Create(fileHash [20]byte, bitfield []uint8) {
 	binaryBitField := serialization.EncodeBitField(bitfield)
 	bitfieldSize := len(binaryBitField)
 
-	pc.Type = uint8(publishChunkType)
+	pc.Type = uint8(PUBLISH_CHUNK_TYPE)
 	pc.BitfieldSize = uint16(bitfieldSize)
 	pc.Reserved = uint8(0)
 	pc.FileHash = fileHash
@@ -87,7 +64,7 @@ type RequestFilePacket struct {
 }
 
 func (rf *RequestFilePacket) Create(fileName string) {
-	rf.Type = uint8(requestFileType)
+	rf.Type = uint8(REQUEST_FILE_TYPE)
 	rf.NameSize = uint8(len(fileName))
 	rf.Reserved = uint16(0)
 	rf.FileName = fileName
@@ -97,7 +74,7 @@ func (rf *RequestFilePacket) ReadString(reader *bytes.Reader) error {
 	return serialization.ReadStringCallback(reader, &rf.FileName, int(rf.NameSize))
 }
 
-// // TRACKER -> NODE
+// TRACKER -> NODE
 
 type AlreadyExistsPacket struct {
 	Type     uint8
@@ -107,7 +84,7 @@ type AlreadyExistsPacket struct {
 }
 
 func (ae *AlreadyExistsPacket) Create(fileName string) {
-	ae.Type = uint8(alreadyExistsType)
+	ae.Type = uint8(ALREADY_EXISTS_TYPE)
 	ae.NameSize = uint8(len(fileName))
 	ae.Reserved = uint16(0)
 	ae.FileName = fileName
@@ -131,7 +108,7 @@ func (an *AnswerNodesPacket) Create(sequenceNumber uint8, nodeIdentifier [4]byte
 	binaryBitField := serialization.EncodeBitField(bitfield)
 	bitfieldSize := len(binaryBitField)
 
-	an.Type = uint8(answerNodesType)
+	an.Type = uint8(ANSWER_NODES_TYPE)
 	an.SequenceNumber = sequenceNumber
 	an.BitfieldSize = uint16(bitfieldSize)
 	an.Reserved = uint16(0)

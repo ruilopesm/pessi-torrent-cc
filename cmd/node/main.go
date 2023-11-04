@@ -1,46 +1,45 @@
 package main
 
 import (
-	"PessiTorrent/internal/common"
-	"PessiTorrent/internal/serialization"
-	"fmt"
+	"PessiTorrent/internal/connection"
+	"PessiTorrent/internal/packets"
+	"log"
 	"net"
-	"os"
 )
 
-func sendMessage(conn net.Conn, message []byte) error {
-	_, err := conn.Write(message)
+type Node struct {
+	serverAddr string
+}
+
+func NewNode(serverAddr string) *Node {
+	return &Node{
+		serverAddr: serverAddr,
+	}
+}
+
+func (n *Node) Start() error {
+	conn, err := net.Dial("tcp", n.serverAddr)
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 
-	fmt.Println("sent bytes: ", message)
+	c := connection.NewConnection(conn)
+
+	var packet packets.RequestFilePacket
+	packet.Create("filename.txt")
+	err = c.WritePacket(packet)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func main() {
-	conn, err := net.Dial("tcp", "localhost:8081")
-
+	node := NewNode("localhost:8080")
+	err := node.Start()
 	if err != nil {
-		fmt.Println("error connecting to the server:", err)
-		os.Exit(1)
-	}
-
-	defer conn.Close()
-
-	var message common.RequestFilePacket
-	message.Create("example.txt")
-
-	serializedMessage, err := serialization.Serialize(message)
-	if err != nil {
-		fmt.Println("error serializing the message:", err)
-		os.Exit(1)
-	}
-
-	err = sendMessage(conn, serializedMessage)
-	if err != nil {
-		fmt.Println("error sending the message:", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }

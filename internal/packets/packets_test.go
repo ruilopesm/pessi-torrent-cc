@@ -1,4 +1,4 @@
-package common
+package packets
 
 import (
 	"PessiTorrent/internal/serialization"
