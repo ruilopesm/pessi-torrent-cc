@@ -11,7 +11,7 @@ import (
 type Tracker struct {
 	listenAddr string
 	ln         net.Listener
-	peerMap    SynchronizedMap
+	nodesMap   SynchronizedMap
 	quitch     chan struct{}
 }
 
@@ -23,7 +23,7 @@ type SynchronizedMap struct {
 func NewTracker(listenAddr string) *Tracker {
 	return &Tracker{
 		listenAddr: listenAddr,
-		peerMap:    SynchronizedMap{m: make(map[net.Addr]*connection.Connection)},
+		nodesMap:   SynchronizedMap{m: make(map[net.Addr]*connection.Connection)},
 		quitch:     make(chan struct{}),
 	}
 }
@@ -58,9 +58,9 @@ func (t *Tracker) acceptLoop() {
 }
 
 func (t *Tracker) handleConnection(conn *connection.Connection) {
-	t.peerMap.Lock()
-	t.peerMap.m[conn.RemoteAddr()] = conn
-	t.peerMap.Unlock()
+	t.nodesMap.Lock()
+	t.nodesMap.m[conn.RemoteAddr()] = conn
+	t.nodesMap.Unlock()
 
 	t.readLoop(conn)
 }
