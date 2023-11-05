@@ -1,63 +1,51 @@
 package main
 
 import (
+	"PessiTorrent/internal/cli"
 	"PessiTorrent/internal/packets"
-	"bufio"
 	"fmt"
-	"os"
-	"strings"
 )
 
-func (n *Node) Cli() error {
-	reader := bufio.NewReader(os.Stdin)
-
-	for {
-		select {
-		case <-n.quitch:
-			fmt.Println("Exiting CLI")
-			return nil
-		default:
-			fmt.Print("> ")
-			input, _ := reader.ReadString('\n')
-			input = strings.TrimSpace(input)
-
-			// Split the input into command and arguments
-			parts := strings.Fields(input)
-			if len(parts) == 0 {
-				continue
-			}
-
-			command := parts[0]
-			args := parts[1:]
-
-			switch command {
-
-			case "GET":
-				if len(args) == 1 {
-					n.get(args[0])
-				} else {
-					fmt.Println("Usage: GET <file>")
-				}
-
-			case "EXIT":
-				fmt.Println("Exiting CLI")
-				close(n.quitch)
-				return nil
-
-			default:
-				fmt.Println("Invalid command. Supported commands: GET, EXIT")
-			}
-		}
+func (n *Node) SetCommands() {
+	n.commands = map[string]cli.Command{
+		"GET": {
+			Usage:   "get <filename>",
+			Execute: n.get,
+		},
+		"EXIT": {
+			Usage:   "exit",
+			Execute: n.exit,
+		},
+		"HELP": {
+			Usage:   "help",
+			Execute: n.help,
+		},
 	}
 }
 
-func (n *Node) get(fileName string) error {
+// commands
+
+func (n *Node) get(args []string) error {
 	var packet packets.RequestFilePacket
-	packet.Create(fileName)
+	packet.Create(args[0])
 	err := n.conn.WritePacket(packet)
 	if err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func (n *Node) exit(args []string) error {
+	close(n.quitch)
+
+	return nil
+}
+
+func (n *Node) help(args []string) error {
+	fmt.Println("Available commands:")
+	for command, cmd := range n.commands {
+		fmt.Printf("%s - %s\n", command, cmd.Usage)
+	}
 	return nil
 }

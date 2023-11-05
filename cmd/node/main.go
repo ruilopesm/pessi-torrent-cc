@@ -1,6 +1,7 @@
 package main
 
 import (
+	"PessiTorrent/internal/cli"
 	"PessiTorrent/internal/connection"
 	"log"
 	"net"
@@ -11,6 +12,7 @@ type Node struct {
 	serverAddr string
 	conn       *connection.Connection
 	quitch     chan struct{}
+	commands   map[string]cli.Command
 }
 
 func NewNode(serverAddr string) *Node {
@@ -28,8 +30,9 @@ func (n *Node) Start() error {
 	defer conn.Close()
 
 	n.conn = connection.NewConnection(conn)
+	n.SetCommands()
 
-	go n.Cli()
+	go cli.StartCLI(n.commands, n.quitch)
 
 	<-n.quitch
 
