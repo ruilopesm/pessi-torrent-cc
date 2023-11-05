@@ -19,8 +19,8 @@ type Command struct {
 	Execute      func(args []string) error
 }
 
-func NewCLI(shutdownHook func()) *CLI {
-	return &CLI{
+func NewCLI(shutdownHook func()) CLI {
+	return CLI{
 		commands:     make(map[string]Command),
 		shutdownHook: shutdownHook,
 	}

@@ -20,8 +20,8 @@ type SynchronizedMap struct {
 	sync.RWMutex
 }
 
-func NewTracker(listenAddr string) *Tracker {
-	return &Tracker{
+func NewTracker(listenAddr string) Tracker {
+	return Tracker{
 		listenAddr: listenAddr,
 		nodesMap:   SynchronizedMap{m: make(map[net.Addr]*connection.Connection)},
 		quitch:     make(chan struct{}),
@@ -53,7 +53,7 @@ func (t *Tracker) acceptLoop() {
 		}
 		conn := connection.NewConnection(c)
 		fmt.Printf("node %s connected\n", conn.RemoteAddr())
-		go t.handleConnection(conn)
+		go t.handleConnection(&conn)
 	}
 }
 

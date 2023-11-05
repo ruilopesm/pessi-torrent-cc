@@ -9,12 +9,12 @@ import (
 
 type Node struct {
 	serverAddr string
-	conn       *connection.Connection
+	conn       connection.Connection
 	quitch     chan struct{}
 }
 
-func NewNode(serverAddr string) *Node {
-	return &Node{
+func NewNode(serverAddr string) Node {
+	return Node{
 		serverAddr: serverAddr,
 		quitch:     make(chan struct{}),
 	}
