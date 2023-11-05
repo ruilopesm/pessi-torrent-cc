@@ -2,18 +2,21 @@ package main
 
 import (
 	"PessiTorrent/internal/connection"
-	"PessiTorrent/internal/packets"
 	"log"
 	"net"
+	"os"
 )
 
 type Node struct {
 	serverAddr string
+	conn       *connection.Connection
+	quitch     chan struct{}
 }
 
 func NewNode(serverAddr string) *Node {
 	return &Node{
 		serverAddr: serverAddr,
+		quitch:     make(chan struct{}),
 	}
 }
 
@@ -24,20 +27,20 @@ func (n *Node) Start() error {
 	}
 	defer conn.Close()
 
-	c := connection.NewConnection(conn)
+	n.conn = connection.NewConnection(conn)
 
-	var packet packets.RequestFilePacket
-	packet.Create("filename.txt")
-	err = c.WritePacket(packet)
-	if err != nil {
-		return err
-	}
+	go n.Cli()
+
+	<-n.quitch
 
 	return nil
 }
 
 func main() {
-	node := NewNode("localhost:8080")
+	ip := os.Args[1]
+	port := os.Args[2]
+
+	node := NewNode(ip + ":" + port)
 	err := node.Start()
 	if err != nil {
 		log.Fatal(err)
