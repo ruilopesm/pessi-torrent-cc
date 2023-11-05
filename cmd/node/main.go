@@ -26,11 +26,15 @@ func (n *Node) Start() error {
 
 	c := connection.NewConnection(conn)
 
-	var packet packets.RequestFilePacket
-	packet.Create("filename.txt")
-	err = c.WritePacket(packet)
-	if err != nil {
-		return err
+	files := []string{"file.txt", "file2.txt", "file3.txt", "file4.txt", "file5.txt"}
+
+	for _, file := range files {
+		var packet packets.RequestFilePacket
+		packet.Create(file)
+		err = c.WritePacket(packet)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
