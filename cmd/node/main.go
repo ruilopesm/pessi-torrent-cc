@@ -29,7 +29,7 @@ func (n *Node) Start() error {
 
 	n.conn = connection.NewConnection(conn)
 	cli := cli.NewCLI(n.stop)
-	cli.AddCommand("requestFile", "<file>", 1, n.requestFile)
+	cli.AddCommand("request", "<file>", 1, n.requestFile)
 
 	go cli.Start()
 

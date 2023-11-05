@@ -4,7 +4,7 @@ import (
 	"PessiTorrent/internal/packets"
 )
 
-// requestFile <file>
+// request <file>
 func (n *Node) requestFile(args []string) error {
 	filename := args[0]
 
