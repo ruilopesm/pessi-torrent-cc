@@ -1,19 +1,22 @@
 package main
 
 import (
+	"PessiTorrent/internal/cli"
 	"PessiTorrent/internal/connection"
-	"PessiTorrent/internal/packets"
 	"log"
 	"net"
 )
 
 type Node struct {
 	serverAddr string
+	conn       connection.Connection
+	quitch     chan struct{}
 }
 
-func NewNode(serverAddr string) *Node {
-	return &Node{
+func NewNode(serverAddr string) Node {
+	return Node{
 		serverAddr: serverAddr,
+		quitch:     make(chan struct{}),
 	}
 }
 
@@ -24,24 +27,23 @@ func (n *Node) Start() error {
 	}
 	defer conn.Close()
 
-	c := connection.NewConnection(conn)
+	n.conn = connection.NewConnection(conn)
+	cli := cli.NewCLI(n.stop)
+	cli.AddCommand("request", "<file>", 1, n.requestFile)
 
-	files := []string{"file.txt", "file2.txt", "file3.txt", "file4.txt", "file5.txt"}
+	go cli.Start()
 
-	for _, file := range files {
-		var packet packets.RequestFilePacket
-		packet.Create(file)
-		err = c.WritePacket(packet)
-		if err != nil {
-			return err
-		}
-	}
+	<-n.quitch
 
 	return nil
 }
 
+func (n *Node) stop() {
+	n.quitch <- struct{}{}
+}
+
 func main() {
-	node := NewNode("localhost:8080")
+	node := NewNode("localhost:42069")
 	err := node.Start()
 	if err != nil {
 		log.Fatal(err)

@@ -12,8 +12,8 @@ type Connection struct {
 	buf  []byte
 }
 
-func NewConnection(conn net.Conn) *Connection {
-	return &Connection{
+func NewConnection(conn net.Conn) Connection {
+	return Connection{
 		conn: conn,
 		buf:  make([]byte, 1024),
 	}
