@@ -1,13 +1,18 @@
 package packets
 
-const PUBLISH_FILE_TYPE = 1
-const ALREADY_EXISTS_TYPE = 2
-const PUBLISH_CHUNK_TYPE = 3
-const REQUEST_FILE_TYPE = 4
-const ANSWER_NODES_TYPE = 5
+const (
+	INIT_TYPE = iota
+	PUBLISH_FILE_TYPE
+	ALREADY_EXISTS_TYPE
+	PUBLISH_CHUNK_TYPE
+	REQUEST_FILE_TYPE
+	ANSWER_NODES_TYPE
+)
 
 func PacketStructFromType(packetType uint8) interface{} {
 	switch packetType {
+	case INIT_TYPE:
+		return &InitPacket{}
 	case PUBLISH_FILE_TYPE:
 		return &PublishFilePacket{}
 	case ALREADY_EXISTS_TYPE:

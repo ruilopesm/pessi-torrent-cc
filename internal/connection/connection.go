@@ -52,19 +52,19 @@ func (c *Connection) WritePacket(packet interface{}) error {
 	return nil
 }
 
-func (c *Connection) ReadPacket() (interface{}, error) {
+func (c *Connection) ReadPacket() (interface{}, uint8, error) {
 	// FIXME: Move this to other module
 	// Read message size (4 bytes)
 	_, err := c.conn.Read(c.buf[:4])
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	size := binary.LittleEndian.Uint32(c.buf[:4])
 
 	// Read message content
 	_, err = c.conn.Read(c.buf[:size])
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// Read packet type (first byte of message content)
@@ -72,8 +72,8 @@ func (c *Connection) ReadPacket() (interface{}, error) {
 	packetStruct := packets.PacketStructFromType(packetType)
 	err = serialization.Deserialize(c.buf[:size], packetStruct)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return packetStruct, nil
+	return packetStruct, packetType, nil
 }

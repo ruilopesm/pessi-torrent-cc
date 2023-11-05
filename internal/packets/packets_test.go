@@ -151,7 +151,7 @@ func TestAlreadyExistsSerializationAndDeserialization(t *testing.T) {
 func TestAnswerNodesSerializationAndDeserialization(t *testing.T) {
 	// Create a sample AnswerNodesPacket instance
 	bitfield := []uint8{0, 2, 7, 10}
-	nodeIdentifier := [4]byte{128, 1, 1, 1}
+	nodeIdentifier := [4]byte{127, 0, 0, 1}
 
 	var original AnswerNodesPacket
 	original.Create(42, nodeIdentifier, uint16(8081), bitfield)

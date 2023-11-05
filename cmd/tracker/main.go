@@ -5,25 +5,56 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"sync"
 )
 
 type Tracker struct {
 	listenAddr string
 	ln         net.Listener
-	nodesMap   SynchronizedMap
+	files      SynchronizedMap[*File]
+	nodes      SynchronizedList[*NodeInfo]
 	quitch     chan struct{}
 }
 
-type SynchronizedMap struct {
-	m map[net.Addr]*connection.Connection
+type SynchronizedMap[T any] struct {
+	m map[string]T
 	sync.RWMutex
 }
 
+type SynchronizedList[T any] struct {
+	l []T
+	sync.RWMutex
+}
+
+type File struct {
+	name     string
+	fileHash [20]byte
+	hashes   [][20]byte
+}
+
+type NodeInfo struct {
+	conn    connection.Connection
+	udpPort uint16
+	files   SynchronizedMap[NodeFile]
+}
+
+type NodeFile struct {
+	file            *File
+	chunksAvailable []uint8
+}
+
 func NewTracker(listenAddr string) Tracker {
+	s, err := net.ResolveTCPAddr("tcp4", ":"+listenAddr)
+	if err != nil {
+		fmt.Println("error resolving tcp addr: ", err)
+		os.Exit(1)
+	}
+
 	return Tracker{
-		listenAddr: listenAddr,
-		nodesMap:   SynchronizedMap{m: make(map[net.Addr]*connection.Connection)},
+		listenAddr: s.String(),
+		files:      SynchronizedMap[*File]{m: make(map[string]*File)},
+		nodes:      SynchronizedList[*NodeInfo]{l: make([]*NodeInfo, 0)},
 		quitch:     make(chan struct{}),
 	}
 }
@@ -34,6 +65,7 @@ func (t *Tracker) Start() error {
 		return err
 	}
 	defer ln.Close()
+	fmt.Println("tracker listening tcp on ", ln.Addr())
 
 	t.ln = ln
 
@@ -53,23 +85,16 @@ func (t *Tracker) acceptLoop() {
 		}
 		conn := connection.NewConnection(c)
 		fmt.Printf("node %s connected\n", conn.RemoteAddr())
+
 		go t.handleConnection(&conn)
 	}
 }
 
 func (t *Tracker) handleConnection(conn *connection.Connection) {
-	t.nodesMap.Lock()
-	t.nodesMap.m[conn.RemoteAddr()] = conn
-	t.nodesMap.Unlock()
-
-	t.readLoop(conn)
-}
-
-func (t *Tracker) readLoop(conn *connection.Connection) {
 	defer conn.Close()
 
 	for {
-		packet, err := conn.ReadPacket()
+		packet, packetType, err := conn.ReadPacket()
 		if err != nil {
 			if err.Error() != "EOF" {
 				fmt.Println("read error: ", err)
@@ -80,12 +105,12 @@ func (t *Tracker) readLoop(conn *connection.Connection) {
 			return
 		}
 
-		fmt.Println("packet received: ", packet)
+		t.HandlePacketsDispatcher(packet, packetType, conn)
 	}
 }
 
 func main() {
-	tracker := NewTracker(":42069")
+	tracker := NewTracker("42069")
 	err := tracker.Start()
 	if err != nil {
 		log.Fatal(err)

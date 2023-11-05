@@ -7,6 +7,25 @@ import (
 
 // NODE -> TRACKER
 
+// TODO: Add DNS support
+type InitPacket struct {
+	Type          uint8
+	Addr          string
+	IPAddrSize    uint8
+	UDPListenPort uint16
+}
+
+func (ip *InitPacket) Create(IPAddress string, udpListenPort uint16) {
+	ip.Type = uint8(INIT_TYPE)
+	ip.Addr = IPAddress
+	ip.IPAddrSize = uint8(len(IPAddress))
+	ip.UDPListenPort = udpListenPort
+}
+
+func (ip *InitPacket) ReadString(reader *bytes.Reader) error {
+	return serialization.ReadStringCallback(reader, &ip.Addr, int(ip.IPAddrSize))
+}
+
 type PublishFilePacket struct {
 	Type           uint8
 	NameSize       uint8
