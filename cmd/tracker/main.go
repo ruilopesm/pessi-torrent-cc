@@ -85,7 +85,7 @@ func (t *Tracker) readLoop(conn *connection.Connection) {
 }
 
 func main() {
-  tracker := NewTracker(":42069")
+	tracker := NewTracker(":42069")
 	err := tracker.Start()
 	if err != nil {
 		log.Fatal(err)

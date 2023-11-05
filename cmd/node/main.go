@@ -5,14 +5,12 @@ import (
 	"PessiTorrent/internal/connection"
 	"log"
 	"net"
-	"os"
 )
 
 type Node struct {
 	serverAddr string
 	conn       *connection.Connection
 	quitch     chan struct{}
-	commands   map[string]cli.Command
 }
 
 func NewNode(serverAddr string) *Node {
@@ -30,20 +28,22 @@ func (n *Node) Start() error {
 	defer conn.Close()
 
 	n.conn = connection.NewConnection(conn)
-	n.SetCommands()
+	cli := cli.NewCLI(n.stop)
+	cli.AddCommand("requestFile", "<file>", 1, n.requestFile)
 
-	go cli.StartCLI(n.commands, n.quitch)
+	go cli.Start()
 
 	<-n.quitch
 
 	return nil
 }
 
-func main() {
-	ip := os.Args[1]
-	port := os.Args[2]
+func (n *Node) stop() {
+	n.quitch <- struct{}{}
+}
 
-	node := NewNode(ip + ":" + port)
+func main() {
+	node := NewNode("localhost:42069")
 	err := node.Start()
 	if err != nil {
 		log.Fatal(err)

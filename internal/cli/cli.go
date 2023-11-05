@@ -7,47 +7,80 @@ import (
 	"strings"
 )
 
+type CLI struct {
+	commands     map[string]Command
+	shutdownHook func()
+}
+
 type Command struct {
-	Usage   string
-	Execute func(args []string) error
+	Name         string
+	Usage        string
+	NumberOfArgs int
+	Execute      func(args []string) error
 }
 
-type CommandsSetter interface {
-	SetCommands()
+func NewCLI(shutdownHook func()) *CLI {
+	return &CLI{
+		commands:     make(map[string]Command),
+		shutdownHook: shutdownHook,
+	}
 }
 
-func StartCLI(commands map[string]Command, quitch chan struct{}) error {
-	reader := bufio.NewReader(os.Stdin)
+func (c *CLI) AddCommand(name string, usage string, numberOfArgs int, execute func(args []string) error) {
+	c.commands[name] = Command{
+		Name:         name,
+		Usage:        usage,
+		NumberOfArgs: numberOfArgs,
+		Execute:      execute,
+	}
+}
+
+func (c *CLI) Start() error {
+	c.help()
 
 	for {
-		select {
-		case <-quitch:
-			fmt.Println("Exiting CLI")
-			return nil
-		default:
-			fmt.Print("> ")
-			input, _ := reader.ReadString('\n')
-			input = strings.TrimSpace(input)
+		fmt.Print("> ")
 
-			// Split the input into command and arguments
-			parts := strings.Fields(input)
-			if len(parts) == 0 {
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return err
+		}
+		input = strings.TrimSuffix(input, "\n")
+		parts := strings.Split(input, " ")
+
+		// Check if the command was previously registered
+		if cmd, ok := c.commands[parts[0]]; ok {
+			args := parts[1:]
+			if len(args) != cmd.NumberOfArgs {
+				fmt.Printf("Wrong number of arguments for %s\n", cmd.Name)
+				fmt.Printf("Usage: %s %s\n", cmd.Name, cmd.Usage)
 				continue
 			}
 
-			command := strings.ToUpper(parts[0])
-			args := parts[1:]
-
-			cmd, exists := commands[command]
-			if exists {
-				err := cmd.Execute(args)
-				if err != nil {
-					continue
-				}
-			} else {
-				cmd, _ = commands["HELP"]
-				cmd.Execute(nil)
+			err := cmd.Execute(args)
+			if err != nil {
+				fmt.Printf("Error executing command %s: %s\n", cmd.Name, err)
 			}
+		} else if parts[0] == "exit" {
+			c.shutdownHook()
+			break
+		} else {
+			fmt.Printf("Unknown command %s\n", parts[0])
+			c.help()
+			continue
 		}
 	}
+
+	return nil
+}
+
+func (c *CLI) help() {
+	fmt.Println("Available commands:")
+
+	for _, cmd := range c.commands {
+		fmt.Printf("\t%s\t%s\n", cmd.Name, cmd.Usage)
+	}
+
+	fmt.Println("\texit\tExit the program")
 }
