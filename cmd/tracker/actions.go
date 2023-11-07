@@ -3,6 +3,7 @@ package main
 import (
 	"PessiTorrent/internal/connection"
 	"PessiTorrent/internal/packets"
+	"PessiTorrent/internal/utils"
 	"fmt"
 )
 
@@ -77,16 +78,18 @@ func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, con
 			defer node.files.Unlock()
 
 			if _, ok := node.files.m[packet.FileName]; ok {
+        nodeIp, err := utils.IPv4ToByteArray(conn.RemoteAddr())
+
+        // TODO: store this toSend packets inside an array and send them afterwards
 				var toSend packets.AnswerNodesPacket
 				toSend.Create(
 					// FIXME: should be a sequence number
 					0,
-					// FIXME: should be the ip address
-					[4]byte{127, 0, 0, 1},
+					nodeIp,
 					node.udpPort,
 					node.files.m[packet.FileName].chunksAvailable,
 				)
-				err := conn.WritePacket(toSend)
+				err = conn.WritePacket(toSend)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -97,7 +100,4 @@ func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, con
 		fmt.Printf("file %s not found\n", packet.FileName)
 		return
 	}
-
-	t.nodes.Lock()
-	defer t.nodes.Unlock()
 }

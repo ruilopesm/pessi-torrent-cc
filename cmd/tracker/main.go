@@ -60,7 +60,7 @@ func NewTracker(listenAddr string) Tracker {
 }
 
 func (t *Tracker) Start() error {
-	ln, err := net.Listen("tcp", t.listenAddr)
+	ln, err := net.Listen("tcp4", t.listenAddr)
 	if err != nil {
 		return err
 	}
