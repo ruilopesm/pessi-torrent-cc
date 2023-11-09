@@ -23,6 +23,10 @@ func (c *Connection) Close() error {
 	return c.conn.Close()
 }
 
+func (c *Connection) LocalAddr() net.Addr {
+	return c.conn.LocalAddr()
+}
+
 func (c *Connection) RemoteAddr() net.Addr {
 	return c.conn.RemoteAddr()
 }

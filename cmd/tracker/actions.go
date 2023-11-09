@@ -22,16 +22,17 @@ func (t *Tracker) HandlePacketsDispatcher(packet interface{}, packetType uint8, 
 
 func (t *Tracker) handleInitPacket(packet *packets.InitPacket, conn *connection.Connection) {
 	fmt.Printf("init packet received from %s\n", conn.RemoteAddr())
+
 	t.nodes.Lock()
 	defer t.nodes.Unlock()
 
 	info := &NodeInfo{
-		conn:    *conn,
-		udpPort: packet.UDPListenPort,
-		files:   SynchronizedMap[NodeFile]{m: make(map[string]NodeFile)},
+		conn:  *conn,
+		files: SynchronizedMap[NodeFile]{m: make(map[string]NodeFile)},
 	}
 
 	t.nodes.l = append(t.nodes.l, info)
+	fmt.Printf("registered node with data: %v, %v\n", packet.IPAddr, packet.UDPPort)
 }
 
 func (t *Tracker) handlePublishFilePacket(packet *packets.PublishFilePacket, conn *connection.Connection) {
@@ -66,33 +67,40 @@ func (t *Tracker) handlePublishFilePacket(packet *packets.PublishFilePacket, con
 
 func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, conn *connection.Connection) {
 	fmt.Printf("request file packet received from %s\n", conn.RemoteAddr())
-	t.files.Lock()
-	defer t.files.Unlock()
+	t.files.RLock()
+	defer t.files.RUnlock()
 
 	if _, ok := t.files.m[packet.FileName]; ok {
-		t.nodes.Lock()
-		defer t.nodes.Unlock()
+		t.nodes.RLock()
+		defer t.nodes.RUnlock()
+
+		var sequenceNumber uint8 = 0
+		var packetsToSend []packets.AnswerNodesPacket
 
 		for _, node := range t.nodes.l {
-			node.files.Lock()
-			defer node.files.Unlock()
+			node.files.RLock()
+			defer node.files.RUnlock()
 
-			if _, ok := node.files.m[packet.FileName]; ok {
-        nodeIp, err := utils.IPv4ToByteArray(conn.RemoteAddr())
-
-        // TODO: store this toSend packets inside an array and send them afterwards
-				var toSend packets.AnswerNodesPacket
-				toSend.Create(
-					// FIXME: should be a sequence number
-					0,
-					nodeIp,
+			if file, ok := node.files.m[packet.FileName]; ok {
+				var packet packets.AnswerNodesPacket
+				packet.Create(
+					sequenceNumber,
+					utils.TCPAddrToBytes(node.conn.RemoteAddr()),
 					node.udpPort,
-					node.files.m[packet.FileName].chunksAvailable,
+					file.chunksAvailable,
 				)
-				err = conn.WritePacket(toSend)
-				if err != nil {
-					fmt.Println(err)
-				}
+				packetsToSend = append(packetsToSend, packet)
+
+				fmt.Printf("sent answer nodes packet to %s\n", conn.RemoteAddr())
+				sequenceNumber++
+			}
+		}
+
+		// Send packets in reverse order
+		for i := len(packetsToSend) - 1; i >= 0; i-- {
+			err := conn.WritePacket(packetsToSend[i])
+			if err != nil {
+				fmt.Printf("error sending answer nodes packet to %s\n", conn.RemoteAddr())
 			}
 		}
 	} else {

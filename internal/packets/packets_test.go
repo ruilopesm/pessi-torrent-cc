@@ -174,16 +174,16 @@ func TestAnswerNodesSerializationAndDeserialization(t *testing.T) {
 	// Compare the original and deserialized structs
 	if original.SequenceNumber != deserialized.SequenceNumber ||
 		original.BitfieldSize != deserialized.BitfieldSize ||
-		original.NodePort != deserialized.NodePort {
+		original.UDPPort != deserialized.UDPPort {
 		t.Errorf("Serialization and deserialization do not match")
 	}
 
-	if len(original.NodeIdentifier) != len(deserialized.NodeIdentifier) {
+	if len(original.NodeIPAddr) != len(deserialized.NodeIPAddr) {
 		t.Errorf("NodeIdentifier length mismatch")
 	}
 
-	for i := 0; i < len(original.NodeIdentifier); i++ {
-		if original.NodeIdentifier[i] != deserialized.NodeIdentifier[i] {
+	for i := 0; i < len(original.NodeIPAddr); i++ {
+		if original.NodeIPAddr[i] != deserialized.NodeIPAddr[i] {
 			t.Errorf("NodeIdentifier values do not match at index %d", i)
 		}
 	}

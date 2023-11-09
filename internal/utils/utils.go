@@ -1,26 +1,21 @@
 package utils
 
 import (
-  "fmt"
-  "net"
+	"net"
 )
 
+func TCPAddrToBytes(addr net.Addr) [4]byte {
+	ip := addr.(*net.TCPAddr).IP.To4()
+	var result [4]byte
+	copy(result[:], ip)
 
-func IPv4ToByteArray(addr net.Addr) ([4]byte, error) {
-	var ipv4Bytes [4]byte
+	return result
+}
 
-	// Check if the provided address is a network address
-	ipNet, ok := addr.(*net.IPAddr)
-	if !ok {
-		return ipv4Bytes, fmt.Errorf("not an IP address")
-	}
+func UDPAddrToBytes(addr net.Addr) [4]byte {
+	ip := addr.(*net.UDPAddr).IP.To4()
+	var result [4]byte
+	copy(result[:], ip)
 
-	// Ensure the IP address is an IPv4 address
-	ip := ipNet.IP.To4()
-	if ip == nil {
-		return ipv4Bytes, fmt.Errorf("not an IPv4 address")
-	}
-
-	copy(ipv4Bytes[:], ip)
-	return ipv4Bytes, nil
+	return result
 }

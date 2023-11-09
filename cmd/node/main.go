@@ -4,44 +4,49 @@ import (
 	"PessiTorrent/internal/cli"
 	"PessiTorrent/internal/connection"
 	"PessiTorrent/internal/packets"
-	"fmt"
+	"PessiTorrent/internal/utils"
 	"log"
 	"net"
 	"os"
+	"strconv"
 )
 
 type Node struct {
+	ipAddr     [4]byte
 	serverAddr string
-	UDPAddr    net.UDPAddr
+	udpPort    uint16
 	conn       connection.Connection
 	quitch     chan struct{}
 }
 
-func NewNode(serverAddr string, udpListenPort string) Node {
-	s, err := net.ResolveUDPAddr("udp4", ":"+udpListenPort)
+func NewNode(serverAddr string, listenUDPPort string) Node {
+	// FIXME: This should be on another module
+	udpPort, err := strconv.ParseUint(listenUDPPort, 10, 16)
 	if err != nil {
-		fmt.Println("error resolving udp addr: ", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	return Node{
 		serverAddr: serverAddr,
-		UDPAddr:    *s,
+		udpPort:    uint16(udpPort),
 		quitch:     make(chan struct{}),
 	}
 }
 
 func (n *Node) Start() error {
-	conn, err := net.Dial("tcp", n.serverAddr)
+	conn, err := net.Dial("tcp4", n.serverAddr)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 
 	n.conn = connection.NewConnection(conn)
+	n.ipAddr = utils.TCPAddrToBytes(conn.LocalAddr())
+
+	// TODO: Listen on udp
 
 	var packet packets.InitPacket
-	packet.Create(n.UDPAddr.String(), uint16(n.UDPAddr.Port))
+	packet.Create(n.ipAddr, n.udpPort)
 	err = n.conn.WritePacket(packet)
 	if err != nil {
 		return err
@@ -62,11 +67,14 @@ func (n *Node) stop() {
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatal("Usage: node <udp port>")
+	if len(os.Args) != 3 {
+		log.Fatal("Usage: node <server address> <udp port>")
+		return
 	}
 
-	node := NewNode("localhost:42069", os.Args[1])
+	// TODO: check if port is inside udp range
+
+	node := NewNode(os.Args[1], os.Args[2])
 	err := node.Start()
 	if err != nil {
 		log.Fatal(err)

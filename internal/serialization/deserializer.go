@@ -31,7 +31,6 @@ func Deserialize(data []byte, struc interface{}) error {
 		field := value.Field(i)
 		if field.CanSet() {
 			err := deserializeField(reader, field.Addr().Interface(), value.Addr().Interface())
-
 			if err != nil {
 				return err
 			}

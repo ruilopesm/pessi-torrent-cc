@@ -18,17 +18,23 @@ func (n *Node) requestFile(args []string) error {
 	}
 
 	// Read response packets
+	// TODO: handle file not found packet
+	responsePacket, _, err := n.conn.ReadPacket()
+	fmt.Printf("node %v, %v has the file\n", responsePacket.(*packets.AnswerNodesPacket).NodeIPAddr, responsePacket.(*packets.AnswerNodesPacket).UDPPort)
+	if err != nil {
+		return err
+	}
+
+	// Read response packets
 	for {
-		receivedPacket, _, err := n.conn.ReadPacket()
-		if err != nil {
-			return err
+		if responsePacket.(*packets.AnswerNodesPacket).SequenceNumber == 0 {
+			break
 		}
 
-		fmt.Printf("node %v has file %s\n", receivedPacket.(*packets.AnswerNodesPacket).NodeIdentifier, filename)
-
-		if receivedPacket.(*packets.AnswerNodesPacket).SequenceNumber == 0 {
-			fmt.Println("no more packets")
-			break
+		responsePacket, _, err = n.conn.ReadPacket()
+		fmt.Printf("node %v, %v has the file\n", responsePacket.(*packets.AnswerNodesPacket).NodeIPAddr, responsePacket.(*packets.AnswerNodesPacket).UDPPort)
+		if err != nil {
+			return err
 		}
 	}
 
