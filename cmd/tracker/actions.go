@@ -28,6 +28,7 @@ func (t *Tracker) handleInitPacket(packet *packets.InitPacket, conn *connection.
 
 	info := &NodeInfo{
 		conn:  *conn,
+    udpPort: packet.UDPPort,
 		files: SynchronizedMap[NodeFile]{m: make(map[string]NodeFile)},
 	}
 
