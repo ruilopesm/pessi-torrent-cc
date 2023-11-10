@@ -27,9 +27,9 @@ func (t *Tracker) handleInitPacket(packet *packets.InitPacket, conn *connection.
 	defer t.nodes.Unlock()
 
 	info := &NodeInfo{
-		conn:  *conn,
-    udpPort: packet.UDPPort,
-		files: SynchronizedMap[NodeFile]{m: make(map[string]NodeFile)},
+		conn:    *conn,
+		udpPort: packet.UDPPort,
+		files:   SynchronizedMap[NodeFile]{m: make(map[string]NodeFile)},
 	}
 
 	t.nodes.l = append(t.nodes.l, info)

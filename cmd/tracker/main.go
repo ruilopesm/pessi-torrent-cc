@@ -94,12 +94,28 @@ func (t *Tracker) handleConnection(conn *connection.Connection) {
 				fmt.Println("read error:", err)
 			} else {
 				fmt.Printf("node %s disconnected\n", conn.RemoteAddr())
+				t.removeNode(conn)
 			}
 
 			return
 		}
 
 		t.HandlePacketsDispatcher(packet, packetType, conn)
+	}
+}
+
+func (t *Tracker) removeNode(conn *connection.Connection) {
+	t.nodes.Lock()
+	defer t.nodes.Unlock()
+
+	for i, node := range t.nodes.l {
+		if node.conn.RemoteAddr() == conn.RemoteAddr() {
+			fmt.Println("removed node", node.conn.RemoteAddr())
+			t.nodes.l[i] = t.nodes.l[len(t.nodes.l)-1]
+			t.nodes.l = t.nodes.l[:len(t.nodes.l)-1]
+
+			return
+		}
 	}
 }
 
