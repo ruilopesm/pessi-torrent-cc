@@ -1,0 +1,10 @@
+version: "3.2"
+
+services:
+  pessi-torrent-coreemu:
+    build: .
+    privileged: true
+    environment:
+      - DISPLAY=:0
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
