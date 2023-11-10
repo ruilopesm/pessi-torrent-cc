@@ -5,35 +5,61 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"sync"
 )
 
 type Tracker struct {
 	listenAddr string
 	ln         net.Listener
-	nodesMap   SynchronizedMap
+	files      SynchronizedMap[*File]
+	nodes      SynchronizedList[*NodeInfo]
 	quitch     chan struct{}
 }
 
-type SynchronizedMap struct {
-	m map[net.Addr]*connection.Connection
+type SynchronizedMap[T any] struct {
+	m map[string]T
 	sync.RWMutex
 }
 
-func NewTracker(listenAddr string) Tracker {
+type SynchronizedList[T any] struct {
+	l []T
+	sync.RWMutex
+}
+
+type File struct {
+	name     string
+	fileHash [20]byte
+	hashes   [][20]byte
+}
+
+type NodeInfo struct {
+	conn    connection.Connection
+	udpPort uint16
+	files   SynchronizedMap[NodeFile]
+}
+
+type NodeFile struct {
+	file            *File
+	chunksAvailable []uint8
+}
+
+func NewTracker(listenPort string) Tracker {
 	return Tracker{
-		listenAddr: listenAddr,
-		nodesMap:   SynchronizedMap{m: make(map[net.Addr]*connection.Connection)},
+		listenAddr: "0.0.0.0:" + listenPort,
+		files:      SynchronizedMap[*File]{m: make(map[string]*File)},
+		nodes:      SynchronizedList[*NodeInfo]{l: make([]*NodeInfo, 0)},
 		quitch:     make(chan struct{}),
 	}
 }
 
 func (t *Tracker) Start() error {
-	ln, err := net.Listen("tcp", t.listenAddr)
+	ln, err := net.Listen("tcp4", t.listenAddr)
 	if err != nil {
 		return err
 	}
 	defer ln.Close()
+	fmt.Println("tracker listening tcp on", ln.Addr())
 
 	t.ln = ln
 
@@ -48,31 +74,24 @@ func (t *Tracker) acceptLoop() {
 	for {
 		c, err := t.ln.Accept()
 		if err != nil {
-			fmt.Println("accept error: ", err)
+			fmt.Println("accept error:", err)
 			continue
 		}
 		conn := connection.NewConnection(c)
 		fmt.Printf("node %s connected\n", conn.RemoteAddr())
+
 		go t.handleConnection(&conn)
 	}
 }
 
 func (t *Tracker) handleConnection(conn *connection.Connection) {
-	t.nodesMap.Lock()
-	t.nodesMap.m[conn.RemoteAddr()] = conn
-	t.nodesMap.Unlock()
-
-	t.readLoop(conn)
-}
-
-func (t *Tracker) readLoop(conn *connection.Connection) {
 	defer conn.Close()
 
 	for {
-		packet, err := conn.ReadPacket()
+		packet, packetType, err := conn.ReadPacket()
 		if err != nil {
 			if err.Error() != "EOF" {
-				fmt.Println("read error: ", err)
+				fmt.Println("read error:", err)
 			} else {
 				fmt.Printf("node %s disconnected\n", conn.RemoteAddr())
 			}
@@ -80,12 +99,19 @@ func (t *Tracker) readLoop(conn *connection.Connection) {
 			return
 		}
 
-		fmt.Println("packet received: ", packet)
+		t.HandlePacketsDispatcher(packet, packetType, conn)
 	}
 }
 
 func main() {
-	tracker := NewTracker(":42069")
+	if len(os.Args) != 2 {
+		fmt.Println("usage: tracker <listen port>")
+		return
+	}
+
+	// TODO: check if port is inside tcp range
+
+	tracker := NewTracker(os.Args[1])
 	err := tracker.Start()
 	if err != nil {
 		log.Fatal(err)

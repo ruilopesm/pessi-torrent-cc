@@ -27,7 +27,7 @@ func decodeBitField(binaryBitfield []byte) []uint8 {
 	return bitfield
 }
 
-// // SetBit sets the bit at the specified position to 1 (starting at 0).
+// SetBit sets the bit at the specified position to 1 (starting at 0).
 func SetBit(bitfield []byte, position int) {
 	offset := int(position / 8)
 	value := bitfield[offset]
@@ -38,7 +38,7 @@ func SetBit(bitfield []byte, position int) {
 	bitfield[offset] = value | uint8(mask)
 }
 
-// // GetBit returns true if the bit value at a given position in the bitfield is set to 1 (starting at 0)
+// GetBit returns true if the bit value at a given position in the bitfield is set to 1 (starting at 0)
 func GetBit(bitfield []byte, position int) bool {
 	offset := int(position / 8)
 	value := bitfield[offset]

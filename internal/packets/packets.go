@@ -7,6 +7,21 @@ import (
 
 // NODE -> TRACKER
 
+// TODO: Add DNS support
+type InitPacket struct {
+	Type     uint8
+	Reserved uint8
+	UDPPort  uint16
+	IPAddr   [4]byte
+}
+
+func (ip *InitPacket) Create(ipAddr [4]byte, udpPort uint16) {
+	ip.Type = uint8(INIT_TYPE)
+	ip.Reserved = uint8(0)
+	ip.UDPPort = udpPort
+	ip.IPAddr = ipAddr
+}
+
 type PublishFilePacket struct {
 	Type           uint8
 	NameSize       uint8
@@ -97,23 +112,23 @@ func (ae *AlreadyExistsPacket) ReadString(reader *bytes.Reader) error {
 type AnswerNodesPacket struct {
 	Type           uint8
 	SequenceNumber uint8
+	UDPPort        uint16
 	BitfieldSize   uint16
 	Reserved       uint16
-	NodeIdentifier [4]byte
-	NodePort       uint16
+	NodeIPAddr     [4]byte
 	Bitfield       []byte
 }
 
-func (an *AnswerNodesPacket) Create(sequenceNumber uint8, nodeIdentifier [4]byte, nodePort uint16, bitfield []uint8) {
+func (an *AnswerNodesPacket) Create(sequenceNumber uint8, ipAddr [4]byte, udpPort uint16, bitfield []uint8) {
 	binaryBitField := serialization.EncodeBitField(bitfield)
 	bitfieldSize := len(binaryBitField)
 
 	an.Type = uint8(ANSWER_NODES_TYPE)
 	an.SequenceNumber = sequenceNumber
+	an.UDPPort = udpPort
 	an.BitfieldSize = uint16(bitfieldSize)
 	an.Reserved = uint16(0)
-	an.NodeIdentifier = nodeIdentifier
-	an.NodePort = nodePort
+	an.NodeIPAddr = ipAddr
 	an.Bitfield = binaryBitField
 }
 
