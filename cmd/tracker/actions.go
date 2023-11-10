@@ -9,11 +9,11 @@ import (
 
 func (t *Tracker) HandlePacketsDispatcher(packet interface{}, packetType uint8, conn *connection.Connection) {
 	switch packetType {
-	case packets.INIT_TYPE:
+	case packets.InitType:
 		t.handleInitPacket(packet.(*packets.InitPacket), conn)
-	case packets.PUBLISH_FILE_TYPE:
+	case packets.PublishFileType:
 		t.handlePublishFilePacket(packet.(*packets.PublishFilePacket), conn)
-	case packets.REQUEST_FILE_TYPE:
+	case packets.RequestFileType:
 		t.handleRequestFilePacket(packet.(*packets.RequestFilePacket), conn)
 	default:
 		fmt.Println("unknown packet type")

@@ -16,7 +16,7 @@ type InitPacket struct {
 }
 
 func (ip *InitPacket) Create(ipAddr [4]byte, udpPort uint16) {
-	ip.Type = uint8(INIT_TYPE)
+	ip.Type = uint8(InitType)
 	ip.Reserved = uint8(0)
 	ip.UDPPort = udpPort
 	ip.IPAddr = ipAddr
@@ -32,7 +32,7 @@ type PublishFilePacket struct {
 }
 
 func (pf *PublishFilePacket) Create(name string, fileHash [20]byte, chunkHashes [][20]byte) {
-	pf.Type = uint8(PUBLISH_FILE_TYPE)
+	pf.Type = uint8(PublishFileType)
 	pf.NameSize = uint8(len(name))
 	pf.NumberOfChunks = uint16(len(chunkHashes))
 	pf.FileHash = fileHash
@@ -60,7 +60,7 @@ func (pc *PublishChunkPacket) Create(fileHash [20]byte, bitfield []uint8) {
 	binaryBitField := serialization.EncodeBitField(bitfield)
 	bitfieldSize := len(binaryBitField)
 
-	pc.Type = uint8(PUBLISH_CHUNK_TYPE)
+	pc.Type = uint8(PublishChunkType)
 	pc.BitfieldSize = uint16(bitfieldSize)
 	pc.Reserved = uint8(0)
 	pc.FileHash = fileHash
@@ -79,7 +79,7 @@ type RequestFilePacket struct {
 }
 
 func (rf *RequestFilePacket) Create(fileName string) {
-	rf.Type = uint8(REQUEST_FILE_TYPE)
+	rf.Type = uint8(RequestFileType)
 	rf.NameSize = uint8(len(fileName))
 	rf.Reserved = uint16(0)
 	rf.FileName = fileName
@@ -99,7 +99,7 @@ type AlreadyExistsPacket struct {
 }
 
 func (ae *AlreadyExistsPacket) Create(fileName string) {
-	ae.Type = uint8(ALREADY_EXISTS_TYPE)
+	ae.Type = uint8(AlreadyExistsType)
 	ae.NameSize = uint8(len(fileName))
 	ae.Reserved = uint16(0)
 	ae.FileName = fileName
@@ -123,7 +123,7 @@ func (an *AnswerNodesPacket) Create(sequenceNumber uint8, ipAddr [4]byte, udpPor
 	binaryBitField := serialization.EncodeBitField(bitfield)
 	bitfieldSize := len(binaryBitField)
 
-	an.Type = uint8(ANSWER_NODES_TYPE)
+	an.Type = uint8(AnswerNodesType)
 	an.SequenceNumber = sequenceNumber
 	an.UDPPort = udpPort
 	an.BitfieldSize = uint16(bitfieldSize)

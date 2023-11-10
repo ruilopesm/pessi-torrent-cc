@@ -39,7 +39,7 @@ func (c *Connection) WritePacket(packet interface{}) error {
 
 	// FIXME: Move this to other module
 	// Write message size (4 bytes)
-	var size int = len(buf)
+	var size = len(buf)
 	sizeBuf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(sizeBuf, uint32(size))
 	_, err = c.conn.Write(sizeBuf)
