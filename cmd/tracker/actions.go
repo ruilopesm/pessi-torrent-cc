@@ -97,6 +97,13 @@ func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, con
 			}
 		}
 
+    fileName := packet.FileName
+    file := t.files.m[fileName]
+    var packet packets.PublishFilePacket
+    packet.Create(file.name, file.fileHash, file.hashes)
+    conn.WritePacket(packet)
+
+
 		// Send packets in reverse order
 		for i := len(packetsToSend) - 1; i >= 0; i-- {
 			err := conn.WritePacket(packetsToSend[i])

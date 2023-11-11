@@ -18,8 +18,13 @@ func (n *Node) requestFile(args []string) error {
 		return err
 	}
 
-	// Read response packets
 	// TODO: handle file not found packet
+  fileHashesPacket, _, err := n.conn.ReadPacket()
+
+  pf := fileHashesPacket.(*packets.PublishFilePacket)
+  n.AddDownloadFile(pf.FileName, pf.FileHash, pf.ChunkHashes)
+
+	// Read response packets
 	responsePacket, _, err := n.conn.ReadPacket()
 	fmt.Printf("node %v, %v has the file\n", responsePacket.(*packets.AnswerNodesPacket).NodeIPAddr, responsePacket.(*packets.AnswerNodesPacket).UDPPort)
 	if err != nil {
@@ -45,7 +50,7 @@ func (n *Node) requestFile(args []string) error {
 // publish <file path>
 func (n *Node) publishFile(args []string) error {
 	filePath := args[0]
-  f, err := n.CreateFile(filePath)
+  f, err := n.AddSharedFile(filePath)
   if err != nil {
     return err
   }
@@ -90,9 +95,9 @@ func (n *Node) checkSharedFiles(args []string) error {
     fmt.Println("----------------------------------------")
     fmt.Printf("File: %v\n", file.filename)
     fmt.Printf("Filepath: %v\n", file.filepath)
-    fmt.Printf("Chunk size (bytes): %v\n", file.chunkSize)
     fmt.Printf("File hash: %v\n", file.fileHash)
     fmt.Printf("Chunk hashes: %v\n", file.chunkHashes)
+    fmt.Printf("Bitfield: %b\n", file.bitfield)
   }
 
   return nil
