@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+  "sync"
 )
 
 type Node struct {
@@ -16,7 +17,14 @@ type Node struct {
 	serverAddr string
 	udpPort    uint16
 	conn       connection.Connection
+  files      SynchronizedMap[*File]
 	quitch     chan struct{}
+}
+
+// FIXME: This is duplicated in the tracker and the node
+type SynchronizedMap[T any] struct {
+	m map[string]T
+	sync.RWMutex
 }
 
 func NewNode(serverAddr string, listenUDPPort string) Node {
@@ -30,6 +38,7 @@ func NewNode(serverAddr string, listenUDPPort string) Node {
 		serverAddr: serverAddr,
 		udpPort:    uint16(udpPort),
 		quitch:     make(chan struct{}),
+		files:      SynchronizedMap[*File]{m: make(map[string]*File)},
 	}
 }
 
@@ -53,8 +62,10 @@ func (n *Node) Start() error {
 	}
 
 	cli := cli.NewCLI(n.stop)
-	cli.AddCommand("request", "<file>", 1, n.requestFile)
-	cli.AddCommand("publish", "<file>", 1, n.publishFile)
+	cli.AddCommand("request", "<file name>", 1, n.requestFile)
+	cli.AddCommand("publish", "<file path>", 1, n.publishFile)
+  cli.AddCommand("load", "<file path>", 1, n.loadSharedFiles)
+  cli.AddCommand("check", "Check loaded files", 0, n.checkSharedFiles)
 	go cli.Start()
 
 	<-n.quitch

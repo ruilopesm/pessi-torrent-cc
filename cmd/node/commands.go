@@ -2,8 +2,9 @@ package main
 
 import (
 	"PessiTorrent/internal/packets"
-	"crypto/sha1"
 	"fmt"
+  "os"
+  "bufio"
 )
 
 // request <file>
@@ -41,17 +42,58 @@ func (n *Node) requestFile(args []string) error {
 	return nil
 }
 
-// publish <file>
+// publish <file path>
 func (n *Node) publishFile(args []string) error {
-	filename := args[0]
+	filePath := args[0]
+  f, err := n.CreateFile(filePath)
+  if err != nil {
+    return err
+  }
 
 	var packet packets.PublishFilePacket
-	// FIXME: create hash from file content and create hashes for all chunks
-	packet.Create(filename, sha1.Sum([]byte(filename)), make([][20]byte, 0))
-	err := n.conn.WritePacket(packet)
+	packet.Create(f.filename, f.fileHash, f.chunkHashes)
+	err = n.conn.WritePacket(packet)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// load <file path>
+func (n *Node) loadSharedFiles(args []string) error {
+  filePath := args[0]
+
+  file, err := os.Open(filePath)
+  if err != nil {
+    return err
+  }
+  defer file.Close()
+
+  // read the file line by line
+  scanner := bufio.NewScanner(file)
+  for scanner.Scan() {
+    line := scanner.Text()
+    // publish the file 
+    n.publishFile([]string{line})
+  }
+
+  return nil
+}
+
+// check
+func (n *Node) checkSharedFiles(args []string) error {
+  n.files.Lock()
+  defer n.files.Unlock()
+
+  for _, file := range n.files.m {
+    fmt.Println("----------------------------------------")
+    fmt.Printf("File: %v\n", file.filename)
+    fmt.Printf("Filepath: %v\n", file.filepath)
+    fmt.Printf("Chunk size (bytes): %v\n", file.chunkSize)
+    fmt.Printf("File hash: %v\n", file.fileHash)
+    fmt.Printf("Chunk hashes: %v\n", file.chunkHashes)
+  }
+
+  return nil
 }

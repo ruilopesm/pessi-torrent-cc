@@ -7,6 +7,7 @@ const (
 	PUBLISH_CHUNK_TYPE
 	REQUEST_FILE_TYPE
 	ANSWER_NODES_TYPE
+  REMOVE_FILE_TYPE
 )
 
 func PacketStructFromType(packetType uint8) interface{} {
