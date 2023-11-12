@@ -10,9 +10,14 @@ ifeq ($(REMOTE), 1)
 	GOCMD = GOARCH=amd64 GOOS=linux go
 endif
 
-.PHONY: all build tracker node format test clean help
+.PHONY: all install build tracker node format lint test clean help
 
 all: help
+
+setup:
+	@cp bin/pre-commit .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
+	@echo "${GREEN}Successfully setup pre-commit${RESET}"
 
 build: tracker node
 
@@ -34,6 +39,10 @@ format:
 	@$(GOCMD) fmt ./...
 	@echo "${GREEN}Successfully formatted project${RESET}"
 
+lint:
+	@./bin/golangci-lint run ./...
+	@echo "${GREEN}Successfully linted project${RESET}"
+
 clean:
 	@rm -rf out
 	@echo "${GREEN}Successfully cleaned project${RESET}"
@@ -45,10 +54,12 @@ help:
 	@echo "  make <command>"
 	@echo ""
 	@echo "${YELLOW}Available Commands:${RESET}"
+	@echo "  setup       Setups the project"
 	@echo "  build       Builds the project"
 	@echo "  tracker     Builds the tracker"
 	@echo "  node        Builds the node"
 	@echo "  format      Formats the project"
+	@echo "  lint        Lints the project"
 	@echo "  test        Runs the tests"
 	@echo "  clean       Cleans the project"
-	@echo "  help        Help about any command"
+	@echo "  help        Shows this help message"

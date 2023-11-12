@@ -2,8 +2,7 @@ package serialization
 
 func EncodeBitField(bitfield []uint8) []byte {
 	lastElement := bitfield[len(bitfield)-1]
-	var size int
-	size = (int(lastElement) / 8) + 1
+	size := (int(lastElement) / 8) + 1
 
 	binaryBitfield := make([]byte, size)
 
