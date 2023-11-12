@@ -91,13 +91,28 @@ func (n *Node) checkSharedFiles(args []string) error {
   n.files.Lock()
   defer n.files.Unlock()
 
-  for _, file := range n.files.m {
+  for _, file := range n.files.M {
     fmt.Println("----------------------------------------")
     fmt.Printf("File: %v\n", file.filename)
     fmt.Printf("Filepath: %v\n", file.filepath)
     fmt.Printf("File hash: %v\n", file.fileHash)
     fmt.Printf("Chunk hashes: %v\n", file.chunkHashes)
     fmt.Printf("Bitfield: %b\n", file.bitfield)
+  }
+
+  return nil
+}
+
+func (n *Node) removeSharedFile(args []string) error {
+  filename := args[0]
+
+  n.RemoveFile(filename)
+	var packet packets.RemoveFilePacket
+	packet.Create(filename)
+
+  err := n.conn.WritePacket(packet)
+  if err != nil {
+    return err
   }
 
   return nil

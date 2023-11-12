@@ -24,6 +24,8 @@ func PacketStructFromType(packetType uint8) interface{} {
 		return &RequestFilePacket{}
 	case ANSWER_NODES_TYPE:
 		return &AnswerNodesPacket{}
+  case REMOVE_FILE_TYPE:
+    return &RemoveFilePacket{}
 	default:
 		return nil
 	}

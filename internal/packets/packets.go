@@ -146,6 +146,10 @@ func (rf *RemoveFilePacket) Create(fileName string) {
   rf.FileName = fileName
 }
 
+func (rf *RemoveFilePacket) ReadString(reader *bytes.Reader) error {
+  return serialization.ReadStringCallback(reader, &rf.FileName, int(rf.NameSize))
+}
+
 func (an *AnswerNodesPacket) ReadSliceByte(reader *bytes.Reader) error {
 	return serialization.ReadSliceByteCallback(reader, &an.Bitfield, int(an.BitfieldSize))
 }

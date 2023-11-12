@@ -8,7 +8,6 @@ import (
 	"PessiTorrent/internal/serialization"
 )
 
-// TODO: add bitfield of chunks the file has
 type File struct {
   filename string
   filepath string 
@@ -52,13 +51,12 @@ func (n *Node) AddSharedFile(filePath string) (*File, error) {
   }
 
   n.files.Lock()
-  n.files.m[filename] = f
+  n.files.M[filename] = f
   n.files.Unlock()
 
   return f, nil
 }
 
-// TODO: melhorar isto aqui
 func (n *Node) AddDownloadFile(filename string, fileHash [20]byte, chunkHashes [][20]byte) (*File, error) {
   f := &File{
     filename: filename,
@@ -68,7 +66,7 @@ func (n *Node) AddDownloadFile(filename string, fileHash [20]byte, chunkHashes [
   }
 
   n.files.Lock()
-  n.files.m[filename] = f
+  n.files.M[filename] = f
   n.files.Unlock()
 
   return f, nil
@@ -77,8 +75,7 @@ func (n *Node) AddDownloadFile(filename string, fileHash [20]byte, chunkHashes [
 func (n *Node) RemoveFile(filename string) error {
   n.files.Lock()
   defer n.files.Unlock()
-
-  delete(n.files.m, filename)
+  delete(n.files.M, filename)
 
   return nil
 }
