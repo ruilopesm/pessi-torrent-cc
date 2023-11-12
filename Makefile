@@ -15,6 +15,8 @@ endif
 all: help
 
 setup:
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.55.2
+	@echo "${GREEN}Successfully installed golangci-lint${RESET}"
 	@cp bin/pre-commit .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@echo "${GREEN}Successfully setup pre-commit${RESET}"

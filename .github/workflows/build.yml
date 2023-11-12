@@ -8,15 +8,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-      
+
       - name: Setup golang
         uses: actions/setup-go@v4
         with:
           go-version: '^1.21.1'
-      
+
       - name: Build project
         run: make build
