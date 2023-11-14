@@ -71,8 +71,8 @@ func (m *SynchronizedMap[V]) Contains(key string) bool {
 }
 
 func (m *SynchronizedMap[V]) ForEach(f func(string, V)) {
-	m.RLock()
-	defer m.RUnlock()
+	m.Lock()
+	defer m.Unlock()
 
 	for k, v := range m.M {
 		f(k, v)

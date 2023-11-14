@@ -53,8 +53,8 @@ func (l *SynchronizedList[V]) Contains(val V) bool {
 }
 
 func (l *SynchronizedList[V]) ForEach(f func(V)) {
-	l.RLock()
-	defer l.RUnlock()
+	l.Lock()
+	defer l.Unlock()
 
 	for _, v := range l.L {
 		f(v)
