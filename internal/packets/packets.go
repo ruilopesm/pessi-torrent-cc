@@ -132,6 +132,24 @@ func (an *AnswerNodesPacket) Create(sequenceNumber uint8, ipAddr [4]byte, udpPor
 	an.Bitfield = binaryBitField
 }
 
+type RemoveFilePacket struct {
+	Type     uint8
+	NameSize uint8
+	Reserved uint16
+	FileName string
+}
+
+func (rf *RemoveFilePacket) Create(fileName string) {
+	rf.Type = uint8(REMOVE_FILE_TYPE)
+	rf.NameSize = uint8(len(fileName))
+	rf.Reserved = uint16(0)
+	rf.FileName = fileName
+}
+
+func (rf *RemoveFilePacket) ReadString(reader *bytes.Reader) error {
+	return serialization.ReadStringCallback(reader, &rf.FileName, int(rf.NameSize))
+}
+
 func (an *AnswerNodesPacket) ReadSliceByte(reader *bytes.Reader) error {
 	return serialization.ReadSliceByteCallback(reader, &an.Bitfield, int(an.BitfieldSize))
 }
