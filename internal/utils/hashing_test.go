@@ -1,9 +1,9 @@
 package utils
 
 import (
-  "crypto/sha1"
-  "os"
-  "testing"
+	"crypto/sha1"
+	"os"
+	"testing"
 )
 
 func TestHashFile(t *testing.T) {
@@ -47,30 +47,30 @@ func TestHashFileChunks(t *testing.T) {
 	defer tempFile.Close()
 
 	// Write some content to the file more than 16000 bytes
-  testContent := "Hello, this is a test file content.\n"
-  for i := 0; i < 1000; i++ {
-    _, err = tempFile.WriteString(testContent)
-    if err != nil {
-      t.Fatalf("Error writing to temporary file: %v", err)
-    }
-  }
+	testContent := "Hello, this is a test file content.\n"
+	for i := 0; i < 1000; i++ {
+		_, err = tempFile.WriteString(testContent)
+		if err != nil {
+			t.Fatalf("Error writing to temporary file: %v", err)
+		}
+	}
 
-  var actualChunkHashes [][20]byte
+	var actualChunkHashes [][20]byte
 	// Call the HashFileChunks function with the temporary file
 	chunkSize, err := HashFileChunks(tempFile, &actualChunkHashes)
 	if err != nil {
 		t.Fatalf("Error hashing file chunks: %v", err)
 	}
 
-  if chunkSize != 16000 && len(actualChunkHashes) != 3 {
-    t.Fatalf("Expected chunk size to be 16000 bytes, but got %v bytes", chunkSize)
-  }
+	if chunkSize != 16000 && len(actualChunkHashes) != 3 {
+		t.Fatalf("Expected chunk size to be 16000 bytes, but got %v bytes", chunkSize)
+	}
 }
 
 func TestChunkSize(t *testing.T) {
 	// Test cases with different file sizes in kilobytes
 	testCases := []struct {
-		fileSize     uint64
+		fileSize          uint64
 		expectedChunkSize uint64
 	}{
 		{1000000000, 16000},

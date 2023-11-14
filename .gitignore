@@ -28,3 +28,4 @@ out/
 
 # Others
 temp/
+bin/golangci-lint

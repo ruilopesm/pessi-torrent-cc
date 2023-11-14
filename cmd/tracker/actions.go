@@ -1,23 +1,23 @@
 package main
 
 import (
-	"PessiTorrent/internal/structs"
 	"PessiTorrent/internal/connection"
 	"PessiTorrent/internal/packets"
+	"PessiTorrent/internal/structs"
 	"PessiTorrent/internal/utils"
 	"fmt"
 )
 
 func (t *Tracker) HandlePacketsDispatcher(packet interface{}, packetType uint8, conn *connection.Connection) {
 	switch packetType {
-	case packets.INIT_TYPE:
+	case packets.InitType:
 		t.handleInitPacket(packet.(*packets.InitPacket), conn)
-	case packets.PUBLISH_FILE_TYPE:
+	case packets.PublishFileType:
 		t.handlePublishFilePacket(packet.(*packets.PublishFilePacket), conn)
-	case packets.REQUEST_FILE_TYPE:
+	case packets.RequestFileType:
 		t.handleRequestFilePacket(packet.(*packets.RequestFilePacket), conn)
-  case packets.REMOVE_FILE_TYPE:
-    t.handleRemoveFilePacket(packet.(*packets.RemoveFilePacket), conn)
+	case packets.REMOVE_FILE_TYPE:
+		t.handleRemoveFilePacket(packet.(*packets.RemoveFilePacket), conn)
 	default:
 		fmt.Println("unknown packet type")
 	}
@@ -32,7 +32,7 @@ func (t *Tracker) handleInitPacket(packet *packets.InitPacket, conn *connection.
 	info := &NodeInfo{
 		conn:    *conn,
 		udpPort: packet.UDPPort,
-    files:  structs.SynchronizedMap[NodeFile]{M: make(map[string]NodeFile)},
+		files:   structs.SynchronizedMap[NodeFile]{M: make(map[string]NodeFile)},
 	}
 
 	t.nodes.L = append(t.nodes.L, info)
@@ -100,12 +100,11 @@ func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, con
 			}
 		}
 
-    fileName := packet.FileName
-    file := t.files.M[fileName]
-    var packet packets.PublishFilePacket
-    packet.Create(file.name, file.fileHash, file.hashes)
-    conn.WritePacket(packet)
-
+		fileName := packet.FileName
+		file := t.files.M[fileName]
+		var packet packets.PublishFilePacket
+		packet.Create(file.name, file.fileHash, file.hashes)
+		conn.WritePacket(packet)
 
 		// Send packets in reverse order
 		for i := len(packetsToSend) - 1; i >= 0; i-- {
@@ -122,26 +121,26 @@ func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, con
 }
 
 func (t *Tracker) handleRemoveFilePacket(packet *packets.RemoveFilePacket, conn *connection.Connection) {
-  fmt.Printf("remove file packet received from %s\n", conn.RemoteAddr())
+	fmt.Printf("remove file packet received from %s\n", conn.RemoteAddr())
 
-  t.nodes.Lock()
-  nodesList := t.nodes.L
+	t.nodes.Lock()
+	nodesList := t.nodes.L
 
-  var node *NodeInfo
-  for i, node := range nodesList {
-    if node.conn.RemoteAddr() == conn.RemoteAddr() {
-      node = nodesList[i]
-      break
-    }
-  }
-  t.nodes.Unlock()
+	var node *NodeInfo
+	for i, node := range nodesList {
+		if node.conn.RemoteAddr() == conn.RemoteAddr() {
+			node = nodesList[i]
+			break
+		}
+	}
+	t.nodes.Unlock()
 
-  if node == nil {
-    return
-  }
+	if node == nil {
+		return
+	}
 
-  node.files.Lock()
-  defer node.files.Unlock()
+	node.files.Lock()
+	defer node.files.Unlock()
 
-  delete(node.files.M, packet.FileName)
+	delete(node.files.M, packet.FileName)
 }

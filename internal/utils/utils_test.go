@@ -42,4 +42,3 @@ func TestUDPAddrToBytes(t *testing.T) {
 		t.Errorf("UDPAddrToBytes: expected %v, got %v", expected, result)
 	}
 }
-

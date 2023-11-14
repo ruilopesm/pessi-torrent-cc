@@ -35,16 +35,16 @@ func (c *CLI) AddCommand(name string, usage string, numberOfArgs int, execute fu
 	}
 }
 
-func (c *CLI) Start() error {
+func (c *CLI) Start() {
 	c.help()
 
 	for {
 		fmt.Print("> ")
 
 		reader := bufio.NewReader(os.Stdin)
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			return err
+		input, error := reader.ReadString('\n')
+		if error != nil {
+			continue
 		}
 		input = strings.TrimSuffix(input, "\n")
 		parts := strings.Split(input, " ")
@@ -71,8 +71,6 @@ func (c *CLI) Start() error {
 			continue
 		}
 	}
-
-	return nil
 }
 
 func (c *CLI) help() {

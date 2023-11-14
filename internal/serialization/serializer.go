@@ -32,21 +32,21 @@ func Serialize(struc interface{}) ([]byte, error) {
 }
 
 func serializeField(buf *bytes.Buffer, data interface{}) error {
-	switch data.(type) {
+	switch data := data.(type) {
 	case uint8:
-		return writeUint8(buf, data.(uint8))
+		return writeUint8(buf, data)
 	case uint16:
-		return writeUint16(buf, data.(uint16))
+		return writeUint16(buf, data)
 	case [4]byte:
-		return writeSliceByte4(buf, data.([4]byte))
+		return writeSliceByte4(buf, data)
 	case [20]byte:
-		return writeSliceByte20(buf, data.([20]byte))
+		return writeSliceByte20(buf, data)
 	case []byte:
-		return writeSliceByte(buf, data.([]byte))
+		return writeSliceByte(buf, data)
 	case [][20]byte:
-		return writeSliceOfSliceByte20(buf, data.([][20]byte))
+		return writeSliceOfSliceByte20(buf, data)
 	case string:
-		return writeString(buf, data.(string))
+		return writeString(buf, data)
 	default:
 		return fmt.Errorf("unsupported data type: %T", data)
 	}

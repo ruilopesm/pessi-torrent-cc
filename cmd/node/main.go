@@ -2,9 +2,9 @@ package main
 
 import (
 	"PessiTorrent/internal/cli"
-	"PessiTorrent/internal/structs"
 	"PessiTorrent/internal/connection"
 	"PessiTorrent/internal/packets"
+	"PessiTorrent/internal/structs"
 	"PessiTorrent/internal/utils"
 	"log"
 	"net"
@@ -17,7 +17,7 @@ type Node struct {
 	serverAddr string
 	udpPort    uint16
 	conn       connection.Connection
-  files      structs.SynchronizedMap[*File]
+	files      structs.SynchronizedMap[*File]
 	quitch     chan struct{}
 }
 
@@ -58,8 +58,8 @@ func (n *Node) Start() error {
 	cli := cli.NewCLI(n.stop)
 	cli.AddCommand("request", "<file name>", 1, n.requestFile)
 	cli.AddCommand("publish", "<path>", 1, n.publish)
-  cli.AddCommand("status", "Check loaded files", 0, n.status)
-  cli.AddCommand("remove", "<file name>", 1, n.removeFile)
+	cli.AddCommand("status", "Check loaded files", 0, n.status)
+	cli.AddCommand("remove", "<file name>", 1, n.removeFile)
 	go cli.Start()
 
 	<-n.quitch
