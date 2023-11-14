@@ -10,22 +10,38 @@ import (
 
 func HashFile(file *os.File) ([20]byte, error) {
 	_, err := file.Seek(0, 0)
+	if err != nil {
+		return [20]byte{}, fmt.Errorf("error seeking file: %v", err)
+	}
+
 	content, err := io.ReadAll(file)
 	if err != nil {
 		return [20]byte{}, fmt.Errorf("error reading file content: %v", err)
 	}
+
 	_, err = file.Seek(0, 0)
+	if err != nil {
+		return [20]byte{}, fmt.Errorf("error seeking file: %v", err)
+	}
 
 	return sha1.Sum(content), nil
 }
 
 func HashFileChunks(file *os.File, dest *[][20]byte) (uint64, error) {
 	_, err := file.Seek(0, 0)
+	if err != nil {
+		return 0, fmt.Errorf("error seeking file: %v", err)
+	}
+
 	content, err := io.ReadAll(file)
 	if err != nil {
 		return 0, fmt.Errorf("error reading file content: %v", err)
 	}
+
 	_, err = file.Seek(0, 0)
+	if err != nil {
+		return 0, fmt.Errorf("error seeking file: %v", err)
+	}
 
 	// Calculate the chunk size
 	chunkSize := ChunkSize(uint64(len(content)))

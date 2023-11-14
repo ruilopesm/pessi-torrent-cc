@@ -104,7 +104,10 @@ func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, con
 		file := t.files.M[fileName]
 		var packet packets.PublishFilePacket
 		packet.Create(file.name, file.fileHash, file.hashes)
-		conn.WritePacket(packet)
+		err := conn.WritePacket(packet)
+		if err != nil {
+			fmt.Printf("error sending publish file packet to %s\n", conn.RemoteAddr())
+		}
 
 		// Send packets in reverse order
 		for i := len(packetsToSend) - 1; i >= 0; i-- {
@@ -124,16 +127,18 @@ func (t *Tracker) handleRemoveFilePacket(packet *packets.RemoveFilePacket, conn 
 	fmt.Printf("remove file packet received from %s\n", conn.RemoteAddr())
 
 	t.nodes.Lock()
-	nodesList := t.nodes.L
+	defer t.nodes.Unlock()
 
+	nodesList := t.nodes.L
 	var node *NodeInfo
 	for i, node := range nodesList {
 		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-			node = nodesList[i]
+			t.nodes.L[i] = t.nodes.L[len(t.nodes.L)-1]
+			t.nodes.L = t.nodes.L[:len(t.nodes.L)-1]
+
 			break
 		}
 	}
-	t.nodes.Unlock()
 
 	if node == nil {
 		return

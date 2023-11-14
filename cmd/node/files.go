@@ -35,6 +35,9 @@ func (n *Node) AddFile(filePath string) (*File, error) {
 
 	chunkHashes := make([][20]byte, 0)
 	_, err = utils.HashFileChunks(file, &chunkHashes)
+	if err != nil {
+		return nil, err
+	}
 
 	var bitfield []uint8
 	// iterate over the file chunks

@@ -19,6 +19,9 @@ func (n *Node) requestFile(args []string) error {
 
 	// TODO: handle file not found packet
 	fileHashesPacket, _, err := n.conn.ReadPacket()
+	if err != nil {
+		return err
+	}
 
 	pf := fileHashesPacket.(*packets.PublishFilePacket)
 	n.files.Lock()
@@ -55,7 +58,12 @@ func (n *Node) requestFile(args []string) error {
 // publish <path>
 func (n *Node) publish(args []string) error {
 	filePath := args[0]
+
 	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+
 	fileInfo, err := file.Stat()
 	if err != nil {
 		return err
@@ -74,7 +82,10 @@ func (n *Node) publish(args []string) error {
 		}
 
 		for _, f := range files {
-			n.publish([]string{filePath + f.Name()})
+			err := n.publish([]string{filePath + f.Name()})
+			if err != nil {
+				return err
+			}
 		}
 
 	} else {
@@ -115,11 +126,15 @@ func (n *Node) status(args []string) error {
 func (n *Node) removeFile(args []string) error {
 	filename := args[0]
 
-	n.RemoveFile(filename)
+	err := n.RemoveFile(filename)
+	if err != nil {
+		return err
+	}
+
 	var packet packets.RemoveFilePacket
 	packet.Create(filename)
 
-	err := n.conn.WritePacket(packet)
+	err = n.conn.WritePacket(packet)
 	if err != nil {
 		return err
 	}
