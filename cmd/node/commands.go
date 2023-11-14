@@ -4,7 +4,6 @@ import (
 	"PessiTorrent/internal/packets"
 	"fmt"
   "os"
-  "bufio"
 )
 
 // request <file>
@@ -22,7 +21,13 @@ func (n *Node) requestFile(args []string) error {
   fileHashesPacket, _, err := n.conn.ReadPacket()
 
   pf := fileHashesPacket.(*packets.PublishFilePacket)
-  n.AddDownloadFile(pf.FileName, pf.FileHash, pf.ChunkHashes)
+  n.files.Lock()
+  n.files.M[filename] = &File{
+    filename: filename,
+    fileHash: pf.FileHash,
+    chunkHashes: pf.ChunkHashes,
+  }
+  n.files.Unlock()
 
 	// Read response packets
 	responsePacket, _, err := n.conn.ReadPacket()
@@ -47,47 +52,51 @@ func (n *Node) requestFile(args []string) error {
 	return nil
 }
 
-// publish <file path>
-func (n *Node) publishFile(args []string) error {
+// publish <path>
+func (n *Node) publish(args []string) error {
 	filePath := args[0]
-  f, err := n.AddSharedFile(filePath)
+  file, err := os.Open(filePath)
+  fileInfo, err := file.Stat()
   if err != nil {
     return err
   }
 
-	var packet packets.PublishFilePacket
-	packet.Create(f.filename, f.fileHash, f.chunkHashes)
-	err = n.conn.WritePacket(packet)
-	if err != nil {
-		return err
-	}
+  if fileInfo.IsDir() {
+    // get all the files in the direcotry
+    files, err := file.Readdir(-1)
+    if err != nil {
+      return err
+    }
+
+    //check if the filePath variable ends with a "/"
+    if filePath[len(filePath)-1] != '/' {
+      filePath = filePath + "/"
+    }
+
+    for _, f := range files {
+      n.publish([]string{filePath + f.Name()})
+    }
+
+  } else {
+    fmt.Println("Publishing file: ", filePath)
+    f, err := n.AddFile(filePath)
+    if err != nil {
+      return err
+    }
+
+    var packet packets.PublishFilePacket
+    packet.Create(f.filename, f.fileHash, f.chunkHashes)
+    err = n.conn.WritePacket(packet)
+    if err != nil {
+      return err
+    }
+  }
 
 	return nil
 }
 
-// load <file path>
-func (n *Node) loadSharedFiles(args []string) error {
-  filePath := args[0]
-
-  file, err := os.Open(filePath)
-  if err != nil {
-    return err
-  }
-  defer file.Close()
-
-  // read the file line by line
-  scanner := bufio.NewScanner(file)
-  for scanner.Scan() {
-    line := scanner.Text()
-    // publish the file 
-    n.publishFile([]string{line})
-  }
-
-  return nil
-}
-
-// check
-func (n *Node) checkSharedFiles(args []string) error {
+// status
+func (n *Node) status(args []string) error {
   n.files.Lock()
   defer n.files.Unlock()
 
@@ -103,7 +112,7 @@ func (n *Node) checkSharedFiles(args []string) error {
   return nil
 }
 
-func (n *Node) removeSharedFile(args []string) error {
+func (n *Node) removeFile(args []string) error {
   filename := args[0]
 
   n.RemoveFile(filename)

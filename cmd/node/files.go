@@ -16,7 +16,7 @@ type File struct {
   bitfield []byte
 }
 
-func (n *Node) AddSharedFile(filePath string) (*File, error) {
+func (n *Node) AddFile(filePath string) (*File, error) {
   if _, err := os.Stat(filePath); os.IsNotExist(err) {
     return nil, fmt.Errorf("file does not exist: %v", filePath)
   }
@@ -48,21 +48,6 @@ func (n *Node) AddSharedFile(filePath string) (*File, error) {
     fileHash: fileHash,
     chunkHashes: chunkHashes,
     bitfield: serialization.EncodeBitField(bitfield),
-  }
-
-  n.files.Lock()
-  n.files.M[filename] = f
-  n.files.Unlock()
-
-  return f, nil
-}
-
-func (n *Node) AddDownloadFile(filename string, fileHash [20]byte, chunkHashes [][20]byte) (*File, error) {
-  f := &File{
-    filename: filename,
-    filepath: "",
-    fileHash: fileHash,
-    chunkHashes: chunkHashes,
   }
 
   n.files.Lock()

@@ -57,10 +57,9 @@ func (n *Node) Start() error {
 
 	cli := cli.NewCLI(n.stop)
 	cli.AddCommand("request", "<file name>", 1, n.requestFile)
-	cli.AddCommand("publish", "<file path>", 1, n.publishFile)
-  cli.AddCommand("load", "<file path>", 1, n.loadSharedFiles)
-  cli.AddCommand("check", "Check loaded files", 0, n.checkSharedFiles)
-  cli.AddCommand("remove", "<file name>", 1, n.removeSharedFile)
+	cli.AddCommand("publish", "<path>", 1, n.publish)
+  cli.AddCommand("status", "Check loaded files", 0, n.status)
+  cli.AddCommand("remove", "<file name>", 1, n.removeFile)
 	go cli.Start()
 
 	<-n.quitch
