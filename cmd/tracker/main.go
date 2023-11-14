@@ -2,7 +2,7 @@ package main
 
 import (
 	"PessiTorrent/internal/connection"
-	"PessiTorrent/internal/structs"
+	"PessiTorrent/internal/structures"
 	"fmt"
 	"log"
 	"net"
@@ -12,8 +12,8 @@ import (
 type Tracker struct {
 	listenAddr string
 	ln         net.Listener
-	files      structs.SynchronizedMap[*File]
-	nodes      structs.SynchronizedList[*NodeInfo]
+	files      structures.SynchronizedMap[*File]
+	nodes      structures.SynchronizedList[*NodeInfo]
 	quitch     chan struct{}
 }
 
@@ -26,7 +26,7 @@ type File struct {
 type NodeInfo struct {
 	conn    connection.Connection
 	udpPort uint16
-	files   structs.SynchronizedMap[NodeFile]
+	files   structures.SynchronizedMap[NodeFile]
 }
 
 type NodeFile struct {
@@ -37,8 +37,8 @@ type NodeFile struct {
 func NewTracker(listenPort string) Tracker {
 	return Tracker{
 		listenAddr: "0.0.0.0:" + listenPort,
-		files:      structs.SynchronizedMap[*File]{M: make(map[string]*File)},
-		nodes:      structs.SynchronizedList[*NodeInfo]{L: make([]*NodeInfo, 0)},
+		files:      structures.NewSynchronizedMap[*File](),
+		nodes:      structures.NewSynchronizedList[*NodeInfo](16),
 		quitch:     make(chan struct{}),
 	}
 }
@@ -95,18 +95,14 @@ func (t *Tracker) handleConnection(conn *connection.Connection) {
 }
 
 func (t *Tracker) removeNode(conn *connection.Connection) {
-	t.nodes.Lock()
-	defer t.nodes.Unlock()
-
-	for i, node := range t.nodes.L {
+	t.nodes.ForEach(func(node *NodeInfo) {
 		if node.conn.RemoteAddr() == conn.RemoteAddr() {
 			fmt.Println("removed node", node.conn.RemoteAddr())
-			t.nodes.L[i] = t.nodes.L[len(t.nodes.L)-1]
-			t.nodes.L = t.nodes.L[:len(t.nodes.L)-1]
+			t.nodes.Remove(node)
 
 			return
 		}
-	}
+	})
 }
 
 func main() {
