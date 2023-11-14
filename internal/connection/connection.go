@@ -9,13 +9,11 @@ import (
 
 type Connection struct {
 	conn net.Conn
-	buf  []byte
 }
 
 func NewConnection(conn net.Conn) Connection {
 	return Connection{
 		conn: conn,
-		buf:  make([]byte, 1024),
 	}
 }
 
@@ -32,23 +30,19 @@ func (c *Connection) RemoteAddr() net.Addr {
 }
 
 func (c *Connection) WritePacket(packet interface{}) error {
-	buf, err := serialization.Serialize(packet)
+	data, err := serialization.Serialize(packet)
 	if err != nil {
 		return err
 	}
 
-	// FIXME: Move this to other module
-	// Write message size (4 bytes)
-	var size = len(buf)
-	sizeBuf := make([]byte, 4)
-	binary.LittleEndian.PutUint32(sizeBuf, uint32(size))
-	_, err = c.conn.Write(sizeBuf)
+	// Write packet length
+	err = binary.Write(c.conn, binary.LittleEndian, uint32(len(data)))
 	if err != nil {
 		return err
 	}
 
-	// Write message content
-	_, err = c.conn.Write(buf)
+	// Write packet data
+	_, err = c.conn.Write(data)
 	if err != nil {
 		return err
 	}
@@ -57,24 +51,24 @@ func (c *Connection) WritePacket(packet interface{}) error {
 }
 
 func (c *Connection) ReadPacket() (interface{}, uint8, error) {
-	// FIXME: Move this to other module
-	// Read message size (4 bytes)
-	_, err := c.conn.Read(c.buf[:4])
-	if err != nil {
-		return nil, 0, err
-	}
-	size := binary.LittleEndian.Uint32(c.buf[:4])
-
-	// Read message content
-	_, err = c.conn.Read(c.buf[:size])
+	// Read packet length
+	var packetLength uint32
+	err := binary.Read(c.conn, binary.LittleEndian, &packetLength)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Read packet type (first byte of message content)
-	packetType := c.buf[0]
+	// Read packet data
+	data := make([]byte, packetLength)
+	_, err = c.conn.Read(data)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// First byte is the packet type
+	packetType := data[0]
 	packetStruct := packets.PacketStructFromType(packetType)
-	err = serialization.Deserialize(c.buf[:size], packetStruct)
+	err = serialization.Deserialize(data, packetStruct)
 	if err != nil {
 		return nil, 0, err
 	}
