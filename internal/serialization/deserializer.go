@@ -7,21 +7,9 @@ import (
 	"reflect"
 )
 
-type StringReader interface {
-	ReadString(reader *bytes.Reader) error
-}
-
-type SliceOfSliceByte20Reader interface {
-	ReadSliceOfSliceByte20(reader *bytes.Reader) error
-}
-
-type SliceByteReader interface {
-	ReadSliceByte(reader *bytes.Reader) error
-}
-
 func Deserialize(data []byte, struc interface{}) error {
 	if reflect.ValueOf(struc).Kind() != reflect.Ptr || reflect.Indirect(reflect.ValueOf(struc)).Kind() != reflect.Struct {
-		return fmt.Errorf("input is not a pointer to a struct")
+		return fmt.Errorf("Input is not a pointer to a struct")
 	}
 
 	reader := bytes.NewReader(data)
@@ -29,13 +17,14 @@ func Deserialize(data []byte, struc interface{}) error {
 
 	for i := 0; i < value.NumField(); i++ {
 		field := value.Field(i)
+
 		if field.CanSet() {
 			err := deserializeField(reader, field.Addr().Interface(), value.Addr().Interface())
 			if err != nil {
 				return err
 			}
 		} else {
-			return fmt.Errorf("unable to set value in field")
+			return fmt.Errorf("Unable to set value in field")
 		}
 	}
 
@@ -59,11 +48,9 @@ func deserializeField(reader *bytes.Reader, data interface{}, struc interface{})
 	case *[]byte:
 		return readStructSliceByte(reader, struc)
 	default:
-		return fmt.Errorf("unsupported data type: %T", data)
+		return fmt.Errorf("Unsupported data type: %T", data)
 	}
 }
-
-// Readers for fixed types
 
 func readUint8(reader *bytes.Reader, data *uint8) error {
 	return binary.Read(reader, binary.BigEndian, data)
@@ -84,8 +71,6 @@ func readSliceByte4(reader *bytes.Reader, data *[4]byte) error {
 func readSliceByte20(reader *bytes.Reader, data *[20]byte) error {
 	return binary.Read(reader, binary.BigEndian, data)
 }
-
-// Readers for unfixed types
 
 func readStructString(reader *bytes.Reader, struc interface{}) error {
 	// Use reflection to check if the struct has a ReadString method
@@ -115,10 +100,13 @@ func readStructString(reader *bytes.Reader, struc interface{}) error {
 
 func ReadStringCallback(reader *bytes.Reader, data *string, size int) error {
 	stringBytes := make([]byte, size)
-	if err := binary.Read(reader, binary.BigEndian, stringBytes); err != nil {
+	err := binary.Read(reader, binary.BigEndian, stringBytes)
+	if err != nil {
 		return err
 	}
+
 	*data = string(stringBytes)
+
 	return nil
 }
 
@@ -134,15 +122,13 @@ func readStructSliceOfSliceByte20(reader *bytes.Reader, struc interface{}) error
 	args := []reflect.Value{reflect.ValueOf(reader)}
 	result := method.Call(args)
 
-	// Check the result of the method call
 	if len(result) != 1 {
 		return fmt.Errorf("ReadSliceOfSliceByte20 method should return one value")
 	}
 
-	// Check if the method returned an error
-	errValue := result[0].Interface()
-	if errValue != nil {
-		return errValue.(error)
+	err := result[0].Interface()
+	if err != nil {
+		return err.(error)
 	}
 
 	return nil
@@ -150,11 +136,12 @@ func readStructSliceOfSliceByte20(reader *bytes.Reader, struc interface{}) error
 
 func ReadSliceOfSliceByte20Callback(reader *bytes.Reader, data *[][20]byte, size int) error {
 	for i := 0; i < size; i++ {
-		// Create a new array for each chunk
 		var newChunkHash [20]byte
-		if err := binary.Read(reader, binary.BigEndian, &newChunkHash); err != nil {
+		err := binary.Read(reader, binary.BigEndian, &newChunkHash)
+		if err != nil {
 			return err
 		}
+
 		*data = append(*data, newChunkHash)
 	}
 
@@ -169,19 +156,16 @@ func readStructSliceByte(reader *bytes.Reader, struc interface{}) error {
 		return fmt.Errorf("ReadSliceByte method not found on struct")
 	}
 
-	// Call the ReadSliceByte method dynamically
 	args := []reflect.Value{reflect.ValueOf(reader)}
 	result := method.Call(args)
 
-	// Check the result of the method call
 	if len(result) != 1 {
 		return fmt.Errorf("ReadSliceByte method should return one value")
 	}
 
-	// Check if the method returned an error
-	errValue := result[0].Interface()
-	if errValue != nil {
-		return errValue.(error)
+	err := result[0].Interface()
+	if err != nil {
+		return err.(error)
 	}
 
 	return nil

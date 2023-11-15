@@ -1,6 +1,7 @@
 package serialization
 
-func EncodeBitField(bitfield []uint8) []byte {
+// EncodeBitField encodes a bitfield into a byte array
+func EncodeBitField(bitfield []uint16) []byte {
 	lastElement := bitfield[len(bitfield)-1]
 	size := (int(lastElement) / 8) + 1
 
@@ -13,20 +14,21 @@ func EncodeBitField(bitfield []uint8) []byte {
 	return binaryBitfield
 }
 
-func decodeBitField(binaryBitfield []byte) []uint8 {
-	var bitfield []uint8
+// DecodeBitField decodes a byte array into a bitfield
+func DecodeBitField(binaryBitfield []byte) []uint16 {
+	var bitfield []uint16
 	size := len(binaryBitfield)
 
 	for i := 0; i < size*8; i++ {
 		if GetBit(binaryBitfield, i) {
-			bitfield = append(bitfield, uint8(i))
+			bitfield = append(bitfield, uint16(i))
 		}
 	}
 
 	return bitfield
 }
 
-// SetBit sets the bit at the specified position to 1 (starting at 0).
+// SetBit sets the bit value at a given position in the bitfield to 1 (starting at 0)
 func SetBit(bitfield []byte, position int) {
 	offset := position / 8
 	value := bitfield[offset]

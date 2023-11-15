@@ -16,7 +16,7 @@ func (t *Tracker) HandlePacketsDispatcher(packet interface{}, packetType uint8, 
 		t.handlePublishFilePacket(packet.(*packets.PublishFilePacket), conn)
 	case packets.RequestFileType:
 		t.handleRequestFilePacket(packet.(*packets.RequestFilePacket), conn)
-	case packets.REMOVE_FILE_TYPE:
+	case packets.RemoveFileType:
 		t.handleRemoveFilePacket(packet.(*packets.RemoveFilePacket), conn)
 	default:
 		fmt.Println("unknown packet type")
@@ -51,8 +51,9 @@ func (t *Tracker) handlePublishFilePacket(packet *packets.PublishFilePacket, con
 	t.nodes.ForEach(func(node *NodeInfo) {
 		if node.conn.RemoteAddr() != conn.RemoteAddr() {
 			f := NodeFile{
-				file:            &file,
-				chunksAvailable: make([]uint8, len(file.hashes)),
+				file: &file,
+				// FIXME: Check if this is correct
+				chunksAvailable: make([]uint16, len(file.hashes)),
 			}
 			node.files.Put(file.name, f)
 		}

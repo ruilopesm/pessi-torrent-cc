@@ -31,7 +31,7 @@ type NodeInfo struct {
 
 type NodeFile struct {
 	file            *File
-	chunksAvailable []uint8
+	chunksAvailable []uint16
 }
 
 func NewTracker(listenPort string) Tracker {

@@ -17,18 +17,6 @@ func NewConnection(conn net.Conn) Connection {
 	}
 }
 
-func (c *Connection) Close() error {
-	return c.conn.Close()
-}
-
-func (c *Connection) LocalAddr() net.Addr {
-	return c.conn.LocalAddr()
-}
-
-func (c *Connection) RemoteAddr() net.Addr {
-	return c.conn.RemoteAddr()
-}
-
 func (c *Connection) WritePacket(packet interface{}) error {
 	data, err := serialization.Serialize(packet)
 	if err != nil {
@@ -74,4 +62,16 @@ func (c *Connection) ReadPacket() (interface{}, uint8, error) {
 	}
 
 	return packetStruct, packetType, nil
+}
+
+func (c *Connection) LocalAddr() net.Addr {
+	return c.conn.LocalAddr()
+}
+
+func (c *Connection) RemoteAddr() net.Addr {
+	return c.conn.RemoteAddr()
+}
+
+func (c *Connection) Close() error {
+	return c.conn.Close()
 }

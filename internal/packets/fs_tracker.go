@@ -7,7 +7,6 @@ import (
 
 // NODE -> TRACKER
 
-// TODO: Add DNS support
 type InitPacket struct {
 	Type     uint8
 	Reserved uint8
@@ -56,7 +55,7 @@ type PublishChunkPacket struct {
 	Bitfield     []byte
 }
 
-func (pc *PublishChunkPacket) Create(fileHash [20]byte, bitfield []uint8) {
+func (pc *PublishChunkPacket) Create(fileHash [20]byte, bitfield []uint16) {
 	binaryBitField := serialization.EncodeBitField(bitfield)
 	bitfieldSize := len(binaryBitField)
 
@@ -119,7 +118,7 @@ type AnswerNodesPacket struct {
 	Bitfield       []byte
 }
 
-func (an *AnswerNodesPacket) Create(sequenceNumber uint8, ipAddr [4]byte, udpPort uint16, bitfield []uint8) {
+func (an *AnswerNodesPacket) Create(sequenceNumber uint8, ipAddr [4]byte, udpPort uint16, bitfield []uint16) {
 	binaryBitField := serialization.EncodeBitField(bitfield)
 	bitfieldSize := len(binaryBitField)
 
@@ -140,7 +139,7 @@ type RemoveFilePacket struct {
 }
 
 func (rf *RemoveFilePacket) Create(fileName string) {
-	rf.Type = uint8(REMOVE_FILE_TYPE)
+	rf.Type = uint8(RemoveFileType)
 	rf.NameSize = uint8(len(fileName))
 	rf.Reserved = uint16(0)
 	rf.FileName = fileName

@@ -18,9 +18,9 @@ type File struct {
 
 func (n *Node) AddFile(filePath string) (*File, error) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("file does not exist: %v", filePath)
+		return nil, fmt.Errorf("Provided file does not exist: %v", filePath)
 	}
-	// open the file
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -39,10 +39,9 @@ func (n *Node) AddFile(filePath string) (*File, error) {
 		return nil, err
 	}
 
-	var bitfield []uint8
-	// iterate over the file chunks
+	var bitfield []uint16
 	for i := 0; i < len(chunkHashes); i++ {
-		bitfield = append(bitfield, uint8(i))
+		bitfield = append(bitfield, uint16(i))
 	}
 
 	f := File{
