@@ -52,7 +52,7 @@ func TestPublishFileSerializationAndDeserialization(t *testing.T) {
 func TestPublishChunkSerializationAndDeserialization(t *testing.T) {
 	// Create a sample PublishChunkPacket instance
 	fileHash := sha1.Sum([]byte("example"))
-	bitfield := []uint8{0, 2, 7, 10}
+	bitfield := []uint16{0, 2, 7, 10}
 
 	var original PublishChunkPacket
 	original.Create(fileHash, bitfield)
@@ -150,7 +150,7 @@ func TestAlreadyExistsSerializationAndDeserialization(t *testing.T) {
 
 func TestAnswerNodesSerializationAndDeserialization(t *testing.T) {
 	// Create a sample AnswerNodesPacket instance
-	bitfield := []uint8{0, 2, 7, 10}
+	bitfield := []uint16{0, 2, 7, 10}
 	nodeIdentifier := [4]byte{127, 0, 0, 1}
 
 	var original AnswerNodesPacket
