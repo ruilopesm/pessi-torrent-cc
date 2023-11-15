@@ -4,7 +4,7 @@ import "sync"
 
 type SynchronizedMap[V any] struct {
 	M map[string]V
-	sync.RWMutex
+	sync.Mutex
 }
 
 func NewSynchronizedMap[V any]() SynchronizedMap[V] {
@@ -12,8 +12,8 @@ func NewSynchronizedMap[V any]() SynchronizedMap[V] {
 }
 
 func (m *SynchronizedMap[V]) Get(key string) (V, bool) {
-	m.RLock()
-	defer m.RUnlock()
+	m.Lock()
+	defer m.Unlock()
 
 	val, ok := m.M[key]
 	return val, ok
@@ -34,15 +34,15 @@ func (m *SynchronizedMap[V]) Delete(key string) {
 }
 
 func (m *SynchronizedMap[V]) Len() int {
-	m.RLock()
-	defer m.RUnlock()
+	m.Lock()
+	defer m.Unlock()
 
 	return len(m.M)
 }
 
 func (m *SynchronizedMap[V]) Keys() []string {
-	m.RLock()
-	defer m.RUnlock()
+	m.Lock()
+	defer m.Unlock()
 
 	keys := make([]string, 0, len(m.M))
 	for k := range m.M {
@@ -52,8 +52,8 @@ func (m *SynchronizedMap[V]) Keys() []string {
 }
 
 func (m *SynchronizedMap[V]) Values() []V {
-	m.RLock()
-	defer m.RUnlock()
+	m.Lock()
+	defer m.Unlock()
 
 	values := make([]V, 0, len(m.M))
 	for _, v := range m.M {
@@ -63,8 +63,8 @@ func (m *SynchronizedMap[V]) Values() []V {
 }
 
 func (m *SynchronizedMap[V]) Contains(key string) bool {
-	m.RLock()
-	defer m.RUnlock()
+	m.Lock()
+	defer m.Unlock()
 
 	_, ok := m.M[key]
 	return ok

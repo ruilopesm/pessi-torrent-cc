@@ -4,7 +4,7 @@ import "sync"
 
 type SynchronizedList[V comparable] struct {
 	L []V
-	sync.RWMutex
+	sync.Mutex
 }
 
 func NewSynchronizedList[V comparable](initialSize uint) SynchronizedList[V] {
@@ -33,15 +33,15 @@ func (l *SynchronizedList[V]) Remove(val V) {
 }
 
 func (l *SynchronizedList[V]) Len() int {
-	l.RLock()
-	defer l.RUnlock()
+	l.Lock()
+	defer l.Unlock()
 
 	return len(l.L)
 }
 
 func (l *SynchronizedList[V]) Contains(val V) bool {
-	l.RLock()
-	defer l.RUnlock()
+	l.Lock()
+	defer l.Unlock()
 
 	for _, v := range l.L {
 		if v == val {
