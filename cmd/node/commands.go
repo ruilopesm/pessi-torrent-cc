@@ -24,13 +24,12 @@ func (n *Node) requestFile(args []string) error {
 	}
 
 	pf := fileHashesPacket.(*packets.PublishFilePacket)
-	n.files.Lock()
-	n.files.M[filename] = &File{
+	f := File{
 		filename:    filename,
 		fileHash:    pf.FileHash,
 		chunkHashes: pf.ChunkHashes,
 	}
-	n.files.Unlock()
+	n.files.Put(filename, &f)
 
 	// Read response packets
 	responsePacket, _, err := n.conn.ReadPacket()
@@ -108,17 +107,14 @@ func (n *Node) publish(args []string) error {
 
 // status
 func (n *Node) status(args []string) error {
-	n.files.Lock()
-	defer n.files.Unlock()
-
-	for _, file := range n.files.M {
+	n.files.ForEach(func(filename string, file *File) {
 		fmt.Println("----------------------------------------")
 		fmt.Printf("File: %v\n", file.filename)
 		fmt.Printf("Filepath: %v\n", file.filepath)
 		fmt.Printf("File hash: %v\n", file.fileHash)
 		fmt.Printf("Chunk hashes: %v\n", file.chunkHashes)
 		fmt.Printf("Bitfield: %b\n", file.bitfield)
-	}
+	})
 
 	return nil
 }
@@ -126,15 +122,12 @@ func (n *Node) status(args []string) error {
 func (n *Node) removeFile(args []string) error {
 	filename := args[0]
 
-	err := n.RemoveFile(filename)
-	if err != nil {
-		return err
-	}
+	n.RemoveFile(filename)
 
 	var packet packets.RemoveFilePacket
 	packet.Create(filename)
 
-	err = n.conn.WritePacket(packet)
+	err := n.conn.WritePacket(packet)
 	if err != nil {
 		return err
 	}

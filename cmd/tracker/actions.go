@@ -3,7 +3,7 @@ package main
 import (
 	"PessiTorrent/internal/connection"
 	"PessiTorrent/internal/packets"
-	"PessiTorrent/internal/structs"
+	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/utils"
 	"fmt"
 )
@@ -26,66 +26,48 @@ func (t *Tracker) HandlePacketsDispatcher(packet interface{}, packetType uint8, 
 func (t *Tracker) handleInitPacket(packet *packets.InitPacket, conn *connection.Connection) {
 	fmt.Printf("init packet received from %s\n", conn.RemoteAddr())
 
-	t.nodes.Lock()
-	defer t.nodes.Unlock()
-
-	info := &NodeInfo{
+	info := NodeInfo{
 		conn:    *conn,
 		udpPort: packet.UDPPort,
-		files:   structs.SynchronizedMap[NodeFile]{M: make(map[string]NodeFile)},
+		files:   structures.NewSynchronizedMap[NodeFile](),
 	}
+	t.nodes.Add(&info)
 
-	t.nodes.L = append(t.nodes.L, info)
 	fmt.Printf("registered node with data: %v, %v\n", packet.IPAddr, packet.UDPPort)
 }
 
 func (t *Tracker) handlePublishFilePacket(packet *packets.PublishFilePacket, conn *connection.Connection) {
 	fmt.Printf("publish file packet received from %s\n", conn.RemoteAddr())
-	t.files.Lock()
-	defer t.files.Unlock()
 
-	file := &File{
+	// Add file to the tracker
+	file := File{
 		name:     packet.FileName,
 		fileHash: packet.FileHash,
 		hashes:   packet.ChunkHashes,
 	}
-
-	t.files.M[file.name] = file
-
-	t.nodes.Lock()
-	defer t.nodes.Unlock()
+	t.files.Put(file.name, &file)
 
 	// Add file to the node's list of files
-	for _, node := range t.nodes.L {
-		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-			node.files.Lock()
-			defer node.files.Unlock()
-			node.files.M[file.name] = NodeFile{
-				file: file,
-				// FIXME: should be a bitfield all zeros
-				chunksAvailable: []uint8{0, 2, 7, 10},
+	t.nodes.ForEach(func(node *NodeInfo) {
+		if node.conn.RemoteAddr() != conn.RemoteAddr() {
+			f := NodeFile{
+				file:            &file,
+				chunksAvailable: make([]uint8, len(file.hashes)),
 			}
+			node.files.Put(file.name, f)
 		}
-	}
+	})
 }
 
 func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, conn *connection.Connection) {
 	fmt.Printf("request file packet received from %s\n", conn.RemoteAddr())
-	t.files.RLock()
-	defer t.files.RUnlock()
 
-	if _, ok := t.files.M[packet.FileName]; ok {
-		t.nodes.RLock()
-		defer t.nodes.RUnlock()
-
+	if t.files.Contains(packet.FileName) {
 		var sequenceNumber uint8 = 0
 		var packetsToSend []packets.AnswerNodesPacket
 
-		for _, node := range t.nodes.L {
-			node.files.RLock()
-			defer node.files.RUnlock()
-
-			if file, ok := node.files.M[packet.FileName]; ok {
+		t.nodes.ForEach(func(node *NodeInfo) {
+			if file, exists := node.files.Get(packet.FileName); exists {
 				var packet packets.AnswerNodesPacket
 				packet.Create(
 					sequenceNumber,
@@ -98,10 +80,9 @@ func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, con
 				fmt.Printf("sent answer nodes packet to %s\n", conn.RemoteAddr())
 				sequenceNumber++
 			}
-		}
+		})
 
-		fileName := packet.FileName
-		file := t.files.M[fileName]
+		file, _ := t.files.Get(packet.FileName)
 		var packet packets.PublishFilePacket
 		packet.Create(file.name, file.fileHash, file.hashes)
 		err := conn.WritePacket(packet)
@@ -126,26 +107,9 @@ func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, con
 func (t *Tracker) handleRemoveFilePacket(packet *packets.RemoveFilePacket, conn *connection.Connection) {
 	fmt.Printf("remove file packet received from %s\n", conn.RemoteAddr())
 
-	t.nodes.Lock()
-	defer t.nodes.Unlock()
-
-	nodesList := t.nodes.L
-	var node *NodeInfo
-	for i, node := range nodesList {
-		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-			t.nodes.L[i] = t.nodes.L[len(t.nodes.L)-1]
-			t.nodes.L = t.nodes.L[:len(t.nodes.L)-1]
-
-			break
+	t.nodes.ForEach(func(node *NodeInfo) {
+		if node.conn.RemoteAddr() != conn.RemoteAddr() {
+			node.files.Delete(packet.FileName)
 		}
-	}
-
-	if node == nil {
-		return
-	}
-
-	node.files.Lock()
-	defer node.files.Unlock()
-
-	delete(node.files.M, packet.FileName)
+	})
 }

@@ -4,7 +4,7 @@ import (
 	"PessiTorrent/internal/cli"
 	"PessiTorrent/internal/connection"
 	"PessiTorrent/internal/packets"
-	"PessiTorrent/internal/structs"
+	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/utils"
 	"log"
 	"net"
@@ -17,7 +17,7 @@ type Node struct {
 	serverAddr string
 	udpPort    uint16
 	conn       connection.Connection
-	files      structs.SynchronizedMap[*File]
+	files      structures.SynchronizedMap[*File]
 	quitch     chan struct{}
 }
 
@@ -31,8 +31,8 @@ func NewNode(serverAddr string, listenUDPPort string) Node {
 	return Node{
 		serverAddr: serverAddr,
 		udpPort:    uint16(udpPort),
+		files:      structures.NewSynchronizedMap[*File](),
 		quitch:     make(chan struct{}),
-		files:      structs.SynchronizedMap[*File]{M: make(map[string]*File)},
 	}
 }
 

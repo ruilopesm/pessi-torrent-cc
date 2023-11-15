@@ -45,25 +45,18 @@ func (n *Node) AddFile(filePath string) (*File, error) {
 		bitfield = append(bitfield, uint8(i))
 	}
 
-	f := &File{
+	f := File{
 		filename:    filename,
 		filepath:    filePath,
 		fileHash:    fileHash,
 		chunkHashes: chunkHashes,
 		bitfield:    serialization.EncodeBitField(bitfield),
 	}
+	n.files.Put(filename, &f)
 
-	n.files.Lock()
-	n.files.M[filename] = f
-	n.files.Unlock()
-
-	return f, nil
+	return &f, nil
 }
 
-func (n *Node) RemoveFile(filename string) error {
-	n.files.Lock()
-	defer n.files.Unlock()
-	delete(n.files.M, filename)
-
-	return nil
+func (n *Node) RemoveFile(filename string) {
+	n.files.Delete(filename)
 }
