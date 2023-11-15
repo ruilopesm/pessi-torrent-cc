@@ -69,13 +69,12 @@ func (n *Node) publish(args []string) error {
 	}
 
 	if fileInfo.IsDir() {
-		// get all the files in the direcotry
 		files, err := file.Readdir(-1)
 		if err != nil {
 			return err
 		}
 
-		//check if the filePath variable ends with a "/"
+		// Add trailing slash if absent
 		if filePath[len(filePath)-1] != '/' {
 			filePath = filePath + "/"
 		}
@@ -88,12 +87,13 @@ func (n *Node) publish(args []string) error {
 		}
 
 	} else {
-		fmt.Println("Publishing file: ", filePath)
+		fmt.Println("Adding file to internal memory:", filePath)
 		f, err := n.AddFile(filePath)
 		if err != nil {
 			return err
 		}
 
+		fmt.Println("Sending file to tracker:", filePath)
 		var packet packets.PublishFilePacket
 		packet.Create(f.filename, f.fileHash, f.chunkHashes)
 		err = n.conn.WritePacket(packet)

@@ -48,9 +48,13 @@ func (c *Connection) ReadPacket() (interface{}, uint8, error) {
 
 	// Read packet data
 	data := make([]byte, packetLength)
-	_, err = c.conn.Read(data)
-	if err != nil {
-		return nil, 0, err
+	bytesRead := 0 // conn.Read does not guarantee atomic reads
+	for bytesRead < int(packetLength) {
+		n, err := c.conn.Read(data[bytesRead:])
+		if err != nil {
+			return nil, 0, err
+		}
+		bytesRead += n
 	}
 
 	// First byte is the packet type
