@@ -18,7 +18,7 @@ type File struct {
 
 func (n *Node) AddFile(filePath string) (*File, error) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Provided file does not exist: %v", filePath)
+		return nil, fmt.Errorf("provided file does not exist: %v", filePath)
 	}
 
 	file, err := os.Open(filePath)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"PessiTorrent/internal/connection"
+	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
 	"fmt"
 	"log"
@@ -67,10 +68,25 @@ func (t *Tracker) acceptLoop() {
 			fmt.Println("accept error:", err)
 			continue
 		}
-		conn := connection.NewConnection(c)
+		conn := connection.NewConnection(c, t.handlePacket)
 		fmt.Printf("node %s connected\n", conn.RemoteAddr())
 
 		go conn.Start()
+	}
+}
+
+func (t *Tracker) handlePacket(packet interface{}, conn *connection.Connection) {
+	switch data := packet.(type) {
+	case *protocol.InitPacket:
+		t.handleInitPacket(packet.(*protocol.InitPacket), conn)
+	case *protocol.PublishFilePacket:
+		t.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
+	case *protocol.RequestFilePacket:
+		t.handleRequestFilePacket(packet.(*protocol.RequestFilePacket), conn)
+	case *protocol.RemoveFilePacket:
+		t.handleRemoveFilePacket(packet.(*protocol.RemoveFilePacket), conn)
+	default:
+		fmt.Println("unknown packet type received: ", data)
 	}
 }
 

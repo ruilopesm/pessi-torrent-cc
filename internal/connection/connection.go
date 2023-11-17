@@ -6,15 +6,19 @@ import (
 	"net"
 )
 
+type PacketHandler func(packet interface{}, conn *Connection)
+
 type Connection struct {
 	net.Conn
-	writeQueue chan interface{}
+	writeQueue   chan interface{}
+	handlePacket PacketHandler
 }
 
-func NewConnection(conn net.Conn) Connection {
+func NewConnection(conn net.Conn, handlePacket PacketHandler) Connection {
 	return Connection{
 		conn,
 		make(chan interface{}),
+		handlePacket,
 	}
 }
 
@@ -50,17 +54,6 @@ func (conn *Connection) readLoop() {
 			return
 		}
 
-		conn.handlePacket(packet)
-	}
-}
-
-func (conn *Connection) handlePacket(packet interface{}) {
-	switch data := packet.(type) {
-	case *protocol.InitPacket:
-		fmt.Println("init packet received")
-	case *protocol.PublishFilePacket:
-		fmt.Println("publish file packet received")
-	default:
-		fmt.Println("unknown packet type received: ", data)
+		conn.handlePacket(packet, conn)
 	}
 }

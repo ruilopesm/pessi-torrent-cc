@@ -10,7 +10,7 @@ import (
 func Serialize(writer io.Writer, struc interface{}) error {
 	value := reflect.ValueOf(struc)
 	if value.Kind() != reflect.Struct {
-		return fmt.Errorf("input is not of type struct")
+		return fmt.Errorf("input is not of type struct (type: %v) (struct: %v)", value.Type(), struc)
 	}
 
 	for i := 0; i < value.NumField(); i++ {
@@ -37,8 +37,18 @@ func serializeField(writer io.Writer, field interface{}) error {
 		return writeString(writer, data)
 	case []uint8:
 		return writeArray(writer, data)
+	case []uint16:
+		return writeArray(writer, data)
+	case []uint32:
+		return writeArray(writer, data)
+	case []uint64:
+		return writeArray(writer, data)
 	case [4]uint8:
 		return writeArray(writer, data[:])
+	case [20]uint8:
+		return writeArray(writer, data[:])
+	case [][20]uint8:
+		return writeArray(writer, data)
 	default:
 		return fmt.Errorf("serialize unsupported type: %T", data)
 	}
@@ -46,7 +56,7 @@ func serializeField(writer io.Writer, field interface{}) error {
 
 func writeString(writer io.Writer, data string) error {
 	// Write the size of the string
-	err := write(writer, len(data))
+	err := write(writer, uint32(len(data)))
 	if err != nil {
 		return err
 	}

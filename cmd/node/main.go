@@ -36,6 +36,10 @@ func NewNode(serverAddr string, listenUDPPort string) Node {
 	}
 }
 
+func (n *Node) handlePacket(packet interface{}, conn *connection.Connection) {
+	log.Println("packet ", packet, " received from ", conn.RemoteAddr())
+}
+
 func (n *Node) Start() error {
 	conn, err := net.Dial("tcp4", n.serverAddr)
 	if err != nil {
@@ -43,7 +47,7 @@ func (n *Node) Start() error {
 	}
 	defer conn.Close()
 
-	n.conn = connection.NewConnection(conn)
+	n.conn = connection.NewConnection(conn, n.handlePacket)
 	go n.conn.Start()
 	n.ipAddr = utils.TCPAddrToBytes(conn.LocalAddr())
 
