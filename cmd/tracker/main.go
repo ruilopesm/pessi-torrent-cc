@@ -70,39 +70,8 @@ func (t *Tracker) acceptLoop() {
 		conn := connection.NewConnection(c)
 		fmt.Printf("node %s connected\n", conn.RemoteAddr())
 
-		go t.handleConnection(&conn)
+		go conn.Start()
 	}
-}
-
-func (t *Tracker) handleConnection(conn *connection.Connection) {
-	defer conn.Close()
-
-	for {
-		packet, packetType, err := conn.ReadPacket()
-		if err != nil {
-			if err.Error() != "EOF" {
-				fmt.Println("read error:", err)
-			} else {
-				fmt.Printf("node %s disconnected\n", conn.RemoteAddr())
-				t.removeNode(conn)
-			}
-
-			return
-		}
-
-		t.HandlePacketsDispatcher(packet, packetType, conn)
-	}
-}
-
-func (t *Tracker) removeNode(conn *connection.Connection) {
-	t.nodes.ForEach(func(node *NodeInfo) {
-		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-			fmt.Println("removed node", node.conn.RemoteAddr())
-			t.nodes.Remove(node)
-
-			return
-		}
-	})
 }
 
 func main() {

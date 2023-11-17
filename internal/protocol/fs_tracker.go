@@ -1,9 +1,4 @@
-package packets
-
-import (
-	"PessiTorrent/internal/serialization"
-	"bytes"
-)
+package protocol
 
 // NODE -> TRACKER
 
@@ -39,14 +34,6 @@ func (pf *PublishFilePacket) Create(name string, fileHash [20]byte, chunkHashes 
 	pf.ChunkHashes = chunkHashes
 }
 
-func (pf *PublishFilePacket) ReadString(reader *bytes.Reader) error {
-	return serialization.ReadStringCallback(reader, &pf.FileName, int(pf.NameSize))
-}
-
-func (pf *PublishFilePacket) ReadSliceOfSliceByte20(reader *bytes.Reader) error {
-	return serialization.ReadSliceOfSliceByte20Callback(reader, &pf.ChunkHashes, int(pf.NumberOfChunks))
-}
-
 type PublishChunkPacket struct {
 	Type         uint8
 	BitfieldSize uint16
@@ -56,7 +43,7 @@ type PublishChunkPacket struct {
 }
 
 func (pc *PublishChunkPacket) Create(fileHash [20]byte, bitfield []uint16) {
-	binaryBitField := serialization.EncodeBitField(bitfield)
+	binaryBitField := EncodeBitField(bitfield)
 	bitfieldSize := len(binaryBitField)
 
 	pc.Type = uint8(PublishChunkType)
@@ -64,10 +51,6 @@ func (pc *PublishChunkPacket) Create(fileHash [20]byte, bitfield []uint16) {
 	pc.Reserved = uint8(0)
 	pc.FileHash = fileHash
 	pc.Bitfield = binaryBitField
-}
-
-func (pc *PublishChunkPacket) ReadSliceByte(reader *bytes.Reader) error {
-	return serialization.ReadSliceByteCallback(reader, &pc.Bitfield, int(pc.BitfieldSize))
 }
 
 type RequestFilePacket struct {
@@ -82,10 +65,6 @@ func (rf *RequestFilePacket) Create(fileName string) {
 	rf.NameSize = uint8(len(fileName))
 	rf.Reserved = uint16(0)
 	rf.FileName = fileName
-}
-
-func (rf *RequestFilePacket) ReadString(reader *bytes.Reader) error {
-	return serialization.ReadStringCallback(reader, &rf.FileName, int(rf.NameSize))
 }
 
 // TRACKER -> NODE
@@ -104,10 +83,6 @@ func (ae *AlreadyExistsPacket) Create(fileName string) {
 	ae.FileName = fileName
 }
 
-func (ae *AlreadyExistsPacket) ReadString(reader *bytes.Reader) error {
-	return serialization.ReadStringCallback(reader, &ae.FileName, int(ae.NameSize))
-}
-
 type AnswerNodesPacket struct {
 	Type           uint8
 	SequenceNumber uint8
@@ -119,7 +94,7 @@ type AnswerNodesPacket struct {
 }
 
 func (an *AnswerNodesPacket) Create(sequenceNumber uint8, ipAddr [4]byte, udpPort uint16, bitfield []uint16) {
-	binaryBitField := serialization.EncodeBitField(bitfield)
+	binaryBitField := EncodeBitField(bitfield)
 	bitfieldSize := len(binaryBitField)
 
 	an.Type = uint8(AnswerNodesType)
@@ -143,12 +118,4 @@ func (rf *RemoveFilePacket) Create(fileName string) {
 	rf.NameSize = uint8(len(fileName))
 	rf.Reserved = uint16(0)
 	rf.FileName = fileName
-}
-
-func (rf *RemoveFilePacket) ReadString(reader *bytes.Reader) error {
-	return serialization.ReadStringCallback(reader, &rf.FileName, int(rf.NameSize))
-}
-
-func (an *AnswerNodesPacket) ReadSliceByte(reader *bytes.Reader) error {
-	return serialization.ReadSliceByteCallback(reader, &an.Bitfield, int(an.BitfieldSize))
 }

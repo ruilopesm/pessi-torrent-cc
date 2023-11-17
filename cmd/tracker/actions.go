@@ -2,28 +2,28 @@ package main
 
 import (
 	"PessiTorrent/internal/connection"
-	"PessiTorrent/internal/packets"
+	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/utils"
 	"fmt"
 )
 
-func (t *Tracker) HandlePacketsDispatcher(packet interface{}, packetType uint8, conn *connection.Connection) {
+func (t *Tracker) HandleprotocolDispatcher(packet interface{}, packetType uint8, conn *connection.Connection) {
 	switch packetType {
-	case packets.InitType:
-		t.handleInitPacket(packet.(*packets.InitPacket), conn)
-	case packets.PublishFileType:
-		t.handlePublishFilePacket(packet.(*packets.PublishFilePacket), conn)
-	case packets.RequestFileType:
-		t.handleRequestFilePacket(packet.(*packets.RequestFilePacket), conn)
-	case packets.RemoveFileType:
-		t.handleRemoveFilePacket(packet.(*packets.RemoveFilePacket), conn)
+	case protocol.InitType:
+		t.handleInitPacket(packet.(*protocol.InitPacket), conn)
+	case protocol.PublishFileType:
+		t.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
+	case protocol.RequestFileType:
+		t.handleRequestFilePacket(packet.(*protocol.RequestFilePacket), conn)
+	case protocol.RemoveFileType:
+		t.handleRemoveFilePacket(packet.(*protocol.RemoveFilePacket), conn)
 	default:
 		fmt.Println("unknown packet type")
 	}
 }
 
-func (t *Tracker) handleInitPacket(packet *packets.InitPacket, conn *connection.Connection) {
+func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *connection.Connection) {
 	fmt.Printf("init packet received from %s\n", conn.RemoteAddr())
 
 	info := NodeInfo{
@@ -36,7 +36,7 @@ func (t *Tracker) handleInitPacket(packet *packets.InitPacket, conn *connection.
 	fmt.Printf("registered node with data: %v, %v\n", packet.IPAddr, packet.UDPPort)
 }
 
-func (t *Tracker) handlePublishFilePacket(packet *packets.PublishFilePacket, conn *connection.Connection) {
+func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, conn *connection.Connection) {
 	fmt.Printf("publish file packet received from %s\n", conn.RemoteAddr())
 
 	// Add file to the tracker
@@ -60,16 +60,16 @@ func (t *Tracker) handlePublishFilePacket(packet *packets.PublishFilePacket, con
 	})
 }
 
-func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, conn *connection.Connection) {
+func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, conn *connection.Connection) {
 	fmt.Printf("request file packet received from %s\n", conn.RemoteAddr())
 
 	if t.files.Contains(packet.FileName) {
 		var sequenceNumber uint8 = 0
-		var packetsToSend []packets.AnswerNodesPacket
+		var packetsToSend []protocol.AnswerNodesPacket
 
 		t.nodes.ForEach(func(node *NodeInfo) {
 			if file, exists := node.files.Get(packet.FileName); exists {
-				var packet packets.AnswerNodesPacket
+				var packet protocol.AnswerNodesPacket
 				packet.Create(
 					sequenceNumber,
 					utils.TCPAddrToBytes(node.conn.RemoteAddr()),
@@ -84,19 +84,12 @@ func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, con
 		})
 
 		file, _ := t.files.Get(packet.FileName)
-		var packet packets.PublishFilePacket
+		var packet protocol.PublishFilePacket
 		packet.Create(file.name, file.fileHash, file.hashes)
-		err := conn.WritePacket(packet)
-		if err != nil {
-			fmt.Printf("error sending publish file packet to %s\n", conn.RemoteAddr())
-		}
-
-		// Send packets in reverse order
+		conn.EnqueuePacket(packet)
+		// Send protocol in reverse order
 		for i := len(packetsToSend) - 1; i >= 0; i-- {
-			err := conn.WritePacket(packetsToSend[i])
-			if err != nil {
-				fmt.Printf("error sending answer nodes packet to %s\n", conn.RemoteAddr())
-			}
+			conn.EnqueuePacket(packetsToSend[i])
 		}
 	} else {
 		// TODO: send file not found packet
@@ -105,7 +98,7 @@ func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, con
 	}
 }
 
-func (t *Tracker) handleRemoveFilePacket(packet *packets.RemoveFilePacket, conn *connection.Connection) {
+func (t *Tracker) handleRemoveFilePacket(packet *protocol.RemoveFilePacket, conn *connection.Connection) {
 	fmt.Printf("remove file packet received from %s\n", conn.RemoteAddr())
 
 	t.nodes.ForEach(func(node *NodeInfo) {

@@ -3,7 +3,7 @@ package main
 import (
 	"PessiTorrent/internal/cli"
 	"PessiTorrent/internal/connection"
-	"PessiTorrent/internal/packets"
+	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/utils"
 	"log"
@@ -44,16 +44,14 @@ func (n *Node) Start() error {
 	defer conn.Close()
 
 	n.conn = connection.NewConnection(conn)
+	go n.conn.Start()
 	n.ipAddr = utils.TCPAddrToBytes(conn.LocalAddr())
 
 	// TODO: Listen on udp
 
-	var packet packets.InitPacket
+	var packet protocol.InitPacket
 	packet.Create(n.ipAddr, n.udpPort)
-	err = n.conn.WritePacket(packet)
-	if err != nil {
-		return err
-	}
+	n.conn.EnqueuePacket(packet)
 
 	cli := cli.NewCLI(n.stop)
 	cli.AddCommand("request", "<file name>", 1, n.requestFile)

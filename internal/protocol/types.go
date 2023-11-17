@@ -1,4 +1,4 @@
-package packets
+package protocol
 
 const (
 	InitType = iota

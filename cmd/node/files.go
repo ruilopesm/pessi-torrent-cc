@@ -1,7 +1,7 @@
 package main
 
 import (
-	"PessiTorrent/internal/serialization"
+	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/utils"
 	"fmt"
 	"os"
@@ -49,7 +49,7 @@ func (n *Node) AddFile(filePath string) (*File, error) {
 		filepath:    filePath,
 		fileHash:    fileHash,
 		chunkHashes: chunkHashes,
-		bitfield:    serialization.EncodeBitField(bitfield),
+		bitfield:    protocol.EncodeBitField(bitfield),
 	}
 	n.files.Put(filename, &f)
 

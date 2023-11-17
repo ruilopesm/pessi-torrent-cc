@@ -1,81 +1,64 @@
 package connection
 
 import (
-	"PessiTorrent/internal/packets"
-	"PessiTorrent/internal/serialization"
-	"encoding/binary"
+	"PessiTorrent/internal/protocol"
+	"fmt"
 	"net"
 )
 
 type Connection struct {
-	conn net.Conn
+	net.Conn
+	writeQueue chan interface{}
 }
 
 func NewConnection(conn net.Conn) Connection {
 	return Connection{
-		conn: conn,
+		conn,
+		make(chan interface{}),
 	}
 }
 
-func (c *Connection) WritePacket(packet interface{}) error {
-	data, err := serialization.Serialize(packet)
-	if err != nil {
-		return err
-	}
-
-	// Write packet length
-	err = binary.Write(c.conn, binary.LittleEndian, uint32(len(data)))
-	if err != nil {
-		return err
-	}
-
-	// Write packet data
-	_, err = c.conn.Write(data)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (conn *Connection) Start() {
+	go conn.writeLoop()
+	go conn.readLoop()
 }
 
-func (c *Connection) ReadPacket() (interface{}, uint8, error) {
-	// Read packet length
-	var packetLength uint32
-	err := binary.Read(c.conn, binary.LittleEndian, &packetLength)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// Read packet data
-	data := make([]byte, packetLength)
-	bytesRead := 0 // conn.Read does not guarantee atomic reads
-	for bytesRead < int(packetLength) {
-		n, err := c.conn.Read(data[bytesRead:])
+func (conn *Connection) writeLoop() {
+	for {
+		packet := <-conn.writeQueue
+		err := protocol.Serialize(conn, packet)
 		if err != nil {
-			return nil, 0, err
+			_ = fmt.Errorf("Error serializing packet: %v", err)
 		}
-		bytesRead += n
 	}
+}
 
-	// First byte is the packet type
-	packetType := data[0]
-	packetStruct := packets.PacketStructFromType(packetType)
-	err = serialization.Deserialize(data, packetStruct)
-	if err != nil {
-		return nil, 0, err
+func (conn *Connection) EnqueuePacket(packet interface{}) {
+	conn.writeQueue <- packet
+}
+
+func (conn *Connection) readLoop() {
+	for {
+		packet, err := protocol.Deserialize(conn)
+		if err != nil {
+			if err.Error() == "EOF" {
+				fmt.Println("Connection closed")
+				return
+			}
+			_ = fmt.Errorf("Error reading packet: %v", err)
+		}
+
+		conn.handlePacket(packet)
 	}
-
-	return packetStruct, packetType, nil
 }
 
-func (c *Connection) LocalAddr() net.Addr {
-	return c.conn.LocalAddr()
-}
-
-func (c *Connection) RemoteAddr() net.Addr {
-	return c.conn.RemoteAddr()
-}
-
-func (c *Connection) Close() error {
-	return c.conn.Close()
+func (conn *Connection) handlePacket(packet interface{}) {
+	switch data := packet.(type) {
+	case *protocol.InitPacket:
+		fmt.Println("init packet received")
+	case *protocol.PublishFilePacket:
+		fmt.Println("publish file packet received")
+	default:
+		fmt.Println("unknown packet type received: ", data)
+	}
 }
