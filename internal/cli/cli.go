@@ -42,11 +42,13 @@ func (c *CLI) Start() {
 		fmt.Print("> ")
 
 		reader := bufio.NewReader(os.Stdin)
-		input, error := reader.ReadString('\n')
-		if error != nil {
+		input, err := reader.ReadString('\n')
+		if err != nil {
 			continue
 		}
 		input = strings.TrimSuffix(input, "\n")
+		input = strings.TrimSuffix(input, "\r") // Windows
+
 		parts := strings.Split(input, " ")
 
 		// Check if the command was previously registered
