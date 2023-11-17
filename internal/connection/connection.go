@@ -28,7 +28,8 @@ func (conn *Connection) writeLoop() {
 		packet := <-conn.writeQueue
 		err := protocol.Serialize(conn, packet)
 		if err != nil {
-			_ = fmt.Errorf("Error serializing packet: %v", err)
+			fmt.Println("error serializing packet: ", err)
+			return
 		}
 	}
 }
@@ -45,7 +46,8 @@ func (conn *Connection) readLoop() {
 				fmt.Println("Connection closed")
 				return
 			}
-			_ = fmt.Errorf("Error reading packet: %v", err)
+			fmt.Println("error reading packet: ", err)
+			return
 		}
 
 		conn.handlePacket(packet)

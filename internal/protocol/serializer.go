@@ -10,7 +10,7 @@ import (
 func Serialize(writer io.Writer, struc interface{}) error {
 	value := reflect.ValueOf(struc)
 	if value.Kind() != reflect.Struct {
-		return fmt.Errorf("Input is not of type struct")
+		return fmt.Errorf("input is not of type struct")
 	}
 
 	for i := 0; i < value.NumField(); i++ {
@@ -22,7 +22,7 @@ func Serialize(writer io.Writer, struc interface{}) error {
 				return err
 			}
 		} else {
-			return fmt.Errorf("Can't interface with field without panicking")
+			return fmt.Errorf("can't interface with field without panicking")
 		}
 	}
 
@@ -32,20 +32,16 @@ func Serialize(writer io.Writer, struc interface{}) error {
 func serializeField(writer io.Writer, field interface{}) error {
 	switch data := field.(type) {
 	case uint8, uint16, uint32, uint64, int8, int16, int32, int64:
-		return writeFixedSize(writer, data)
-	case [4]byte, [20]byte:
-		return writeFixedSize(writer, data)
+		return write(writer, data)
 	case string:
 		return writeString(writer, data)
-	case [][20]byte:
+	case []uint8:
 		return writeArray(writer, data)
+	case [4]uint8:
+		return writeArray(writer, data[:])
 	default:
-		return fmt.Errorf("Unsupported type: %T", data)
+		return fmt.Errorf("serialize unsupported type: %T", data)
 	}
-}
-
-func writeFixedSize(writer io.Writer, data interface{}) error {
-	return write(writer, data)
 }
 
 func writeString(writer io.Writer, data string) error {
@@ -56,7 +52,7 @@ func writeString(writer io.Writer, data string) error {
 	}
 
 	// Write the content of the string in bytes
-	err = write(writer, []byte(data))
+	err = write(writer, []uint8(data))
 	if err != nil {
 		return err
 	}
@@ -65,15 +61,16 @@ func writeString(writer io.Writer, data string) error {
 }
 
 func writeArray[T any](writer io.Writer, data []T) error {
-	// Write the size of the array
-	err := write(writer, len(data))
+	err := write(writer, uint32(len(data)))
 	if err != nil {
 		return err
 	}
 
-	// Write the content of the array
 	for _, element := range data {
-		serializeField(writer, element)
+		err := serializeField(writer, element)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
