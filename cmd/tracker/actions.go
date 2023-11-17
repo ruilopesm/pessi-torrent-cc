@@ -49,10 +49,9 @@ func (t *Tracker) handlePublishFilePacket(packet *packets.PublishFilePacket, con
 
 	// Add file to the node's list of files
 	t.nodes.ForEach(func(node *NodeInfo) {
-		if node.conn.RemoteAddr() != conn.RemoteAddr() {
+		if node.conn.RemoteAddr() == conn.RemoteAddr() {
 			f := NodeFile{
 				file: &file,
-				// FIXME: Check if this is correct
 				chunksAvailable: make([]uint16, len(file.hashes)),
 			}
 			node.files.Put(file.name, f)
@@ -77,8 +76,6 @@ func (t *Tracker) handleRequestFilePacket(packet *packets.RequestFilePacket, con
 					file.chunksAvailable,
 				)
 				packetsToSend = append(packetsToSend, packet)
-
-				fmt.Printf("sent answer nodes packet to %s\n", conn.RemoteAddr())
 				sequenceNumber++
 			}
 		})
