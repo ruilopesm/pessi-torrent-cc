@@ -10,14 +10,14 @@ type PacketHandler func(packet interface{}, conn *Connection)
 
 type Connection struct {
 	net.Conn
-	writeQueue   chan interface{}
+	writeQueue   chan protocol.Packet
 	handlePacket PacketHandler
 }
 
 func NewConnection(conn net.Conn, handlePacket PacketHandler) Connection {
 	return Connection{
 		conn,
-		make(chan interface{}),
+		make(chan protocol.Packet),
 		handlePacket,
 	}
 }
@@ -38,7 +38,7 @@ func (conn *Connection) writeLoop() {
 	}
 }
 
-func (conn *Connection) EnqueuePacket(packet interface{}) {
+func (conn *Connection) EnqueuePacket(packet protocol.Packet) {
 	conn.writeQueue <- packet
 }
 

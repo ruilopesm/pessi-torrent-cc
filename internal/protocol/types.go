@@ -10,7 +10,11 @@ const (
 	RemoveFileType
 )
 
-func PacketStructFromType(packetType uint8) interface{} {
+type Packet interface {
+	GetPacketType() uint8
+}
+
+func PacketStructFromType(packetType uint8) Packet {
 	switch packetType {
 	case InitType:
 		return &InitPacket{}

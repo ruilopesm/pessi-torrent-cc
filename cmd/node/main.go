@@ -55,7 +55,7 @@ func (n *Node) Start() error {
 
 	var packet protocol.InitPacket
 	packet.Create(n.ipAddr, n.udpPort)
-	n.conn.EnqueuePacket(packet)
+	n.conn.EnqueuePacket(&packet)
 
 	cli := cli.NewCLI(n.stop)
 	cli.AddCommand("request", "<file name>", 1, n.requestFile)

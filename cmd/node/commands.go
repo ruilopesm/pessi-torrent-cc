@@ -12,7 +12,7 @@ func (n *Node) requestFile(args []string) error {
 
 	var packet protocol.RequestFilePacket
 	packet.Create(filename)
-	n.conn.EnqueuePacket(packet)
+	n.conn.EnqueuePacket(&packet)
 
 	return nil
 }
@@ -60,14 +60,14 @@ func (n *Node) publish(args []string) error {
 
 		var packet protocol.PublishFilePacket
 		packet.Create(f.filename, f.fileHash, f.chunkHashes)
-		n.conn.EnqueuePacket(packet)
+		n.conn.EnqueuePacket(&packet)
 	}
 
 	return nil
 }
 
 // status
-func (n *Node) status(args []string) error {
+func (n *Node) status(_ []string) error {
 	n.files.ForEach(func(filename string, file *File) {
 		fmt.Println("----------------------------------------")
 		fmt.Printf("File: %v\n", file.filename)
@@ -88,7 +88,7 @@ func (n *Node) removeFile(args []string) error {
 	var packet protocol.RemoveFilePacket
 	packet.Create(filename)
 
-	n.conn.EnqueuePacket(packet)
+	n.conn.EnqueuePacket(&packet)
 
 	return nil
 }

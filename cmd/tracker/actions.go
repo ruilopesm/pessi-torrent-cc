@@ -86,10 +86,10 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 		file, _ := t.files.Get(packet.FileName)
 		var packet protocol.PublishFilePacket
 		packet.Create(file.name, file.fileHash, file.hashes)
-		conn.EnqueuePacket(packet)
+		conn.EnqueuePacket(&packet)
 		// Send protocol in reverse order
 		for i := len(packetsToSend) - 1; i >= 0; i-- {
-			conn.EnqueuePacket(packetsToSend[i])
+			conn.EnqueuePacket(&packetsToSend[i])
 		}
 	} else {
 		// TODO: send file not found packet
