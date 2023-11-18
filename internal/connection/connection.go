@@ -2,7 +2,9 @@ package connection
 
 import (
 	"PessiTorrent/internal/protocol"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 )
 
@@ -27,6 +29,13 @@ func (conn *Connection) Start() {
 	go conn.readLoop()
 }
 
+func (conn *Connection) Stop() {
+	err := conn.Close()
+	if err != nil {
+		fmt.Println("error closing connection: ", err)
+	}
+}
+
 func (conn *Connection) writeLoop() {
 	for {
 		packet := <-conn.writeQueue
@@ -46,7 +55,7 @@ func (conn *Connection) readLoop() {
 	for {
 		packet, err := protocol.Deserialize(conn)
 		if err != nil {
-			if err.Error() == "EOF" {
+			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 				fmt.Println("Connection closed")
 				return
 			}
