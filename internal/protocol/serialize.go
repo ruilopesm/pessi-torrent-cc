@@ -41,7 +41,7 @@ func Deserialize(reader io.Reader) (Packet, error) {
 	var structType uint8
 	err := read(reader, &structType)
 	if err != nil {
-		return nil, fmt.Errorf("error deserializing struct type: %v", err)
+		return nil, err
 	}
 
 	struc := PacketStructFromType(structType)
