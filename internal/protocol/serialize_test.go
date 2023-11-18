@@ -47,7 +47,7 @@ func TestSerialize(t *testing.T) {
 	writer := bufio.NewWriter(&buffer)
 
 	// serialize packet
-	err := Serialize(writer, &packet)
+	err := SerializePacket(writer, &packet)
 	if err != nil {
 		t.Fatalf("error serializing packet: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestSerialize(t *testing.T) {
 	reader := bufio.NewReader(&buffer)
 
 	// deserialize packet
-	packet2, err := Deserialize(reader)
+	packet2, err := DeserializePacket(reader)
 	if err != nil {
 		t.Fatalf("error deserializing packet: %v", err)
 	}
@@ -92,5 +92,48 @@ func TestSerialize(t *testing.T) {
 		if packet.ChunkHashes[i] != deserialized.ChunkHashes[i] {
 			t.Fatalf("packet.ChunkHashes[i] != deserialized.ChunkHashes[i]")
 		}
+	}
+}
+
+func TestSerializeStructInsideStruct(t *testing.T) {
+	type TestStruct struct {
+		InnerStruct struct {
+			Number uint8
+		}
+		Number uint8
+	}
+
+	var struc TestStruct
+
+	struc.InnerStruct.Number = 1
+	struc.Number = 2
+
+	buffer := bytes.Buffer{}
+	writer := bufio.NewWriter(&buffer)
+
+	err := SerializeStruct(writer, &struc)
+	if err != nil {
+		t.Fatalf("error serializing struct: %v", err)
+	}
+
+	err = writer.Flush()
+	if err != nil {
+		t.Fatalf("error flushing buffer: %v", err)
+	}
+
+	reader := bufio.NewReader(&buffer)
+
+	var struc2 TestStruct
+	err = DeserializeToStruct(reader, &struc2)
+	if err != nil {
+		t.Fatalf("error deserializing struct: %v", err)
+	}
+
+	if struc2.InnerStruct.Number != 1 {
+		t.Fatalf("struc2.InnerStruct.Number != 1")
+	}
+
+	if struc2.Number != 2 {
+		t.Fatalf("struc2.Number != 2")
 	}
 }

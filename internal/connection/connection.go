@@ -39,7 +39,7 @@ func (conn *Connection) Stop() {
 func (conn *Connection) writeLoop() {
 	for {
 		packet := <-conn.writeQueue
-		err := protocol.Serialize(conn, packet)
+		err := protocol.SerializePacket(conn, packet)
 		if err != nil {
 			fmt.Println("error serializing packet: ", err)
 			return
@@ -53,7 +53,7 @@ func (conn *Connection) EnqueuePacket(packet protocol.Packet) {
 
 func (conn *Connection) readLoop() {
 	for {
-		packet, err := protocol.Deserialize(conn)
+		packet, err := protocol.DeserializePacket(conn)
 		if err != nil {
 			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 				fmt.Println("Connection closed")

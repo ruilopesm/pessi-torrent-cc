@@ -7,24 +7,38 @@ import (
 	"reflect"
 )
 
-func Serialize(writer io.Writer, packet Packet) error {
-	value := reflect.ValueOf(packet)
-
-	if value.Kind() == reflect.Ptr {
-		value = value.Elem()
-	}
-
+func SerializePacket(writer io.Writer, packet Packet) error {
 	// First byte is the type of the struct
 	err := write(writer, packet.GetPacketType())
 	if err != nil {
 		return err
 	}
 
+	err2 := SerializeStruct(writer, packet)
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func SerializeStruct(writer io.Writer, struc interface{}) error {
+	value := reflect.ValueOf(struc)
+
+	if value.Kind() == reflect.Ptr {
+		value = value.Elem()
+	}
+
 	for i := 0; i < value.NumField(); i++ {
 		field := value.Field(i)
 
 		if field.CanInterface() {
-			err := serializeField(writer, field.Interface())
+			var err error
+			if field.Type().Kind() == reflect.Struct {
+				err = SerializeStruct(writer, field.Interface())
+			} else {
+				err = serializeField(writer, field.Interface())
+			}
 			if err != nil {
 				return err
 			}
@@ -32,11 +46,10 @@ func Serialize(writer io.Writer, packet Packet) error {
 			return fmt.Errorf("can't interface with field without panicking")
 		}
 	}
-
 	return nil
 }
 
-func Deserialize(reader io.Reader) (Packet, error) {
+func DeserializePacket(reader io.Reader) (Packet, error) {
 	// First byte is the type of the struct
 	var structType uint8
 	err := read(reader, &structType)
@@ -44,32 +57,42 @@ func Deserialize(reader io.Reader) (Packet, error) {
 		return nil, err
 	}
 
-	struc := PacketStructFromType(structType)
+	packet := PacketStructFromType(structType)
 
+	err = DeserializeToStruct(reader, packet)
+	if err != nil {
+		return nil, err
+	}
+
+	return packet, nil
+}
+
+func DeserializeToStruct(reader io.Reader, struc interface{}) error {
 	value := reflect.ValueOf(struc)
 	indirect := reflect.Indirect(value)
 	if value.Kind() != reflect.Ptr || indirect.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("input is not of type struct (type: %v) (struct: %v)", value.Type(), struc)
+		return fmt.Errorf("input is not of type struct (type: %v) (struct: %v)", value.Type(), struc)
 	}
 
 	for i := 0; i < indirect.NumField(); i++ {
 		field := indirect.Field(i)
 
 		if field.CanSet() {
-			err := deserializeToField(reader, field.Addr().Interface())
+			var err error
+			if field.Type().Kind() == reflect.Struct {
+				err = DeserializeToStruct(reader, field.Addr().Interface())
+			} else {
+				err = deserializeToField(reader, field.Addr().Interface())
+			}
 			if err != nil {
-				return nil, fmt.Errorf("error deserializing field %v: %w", field.Interface(), err)
+				return fmt.Errorf("error deserializing field %v: %w", field.Interface(), err)
 			}
 		} else {
-			return nil, fmt.Errorf("unable to set field without panicking")
+			return fmt.Errorf("unable to set field without panicking")
 		}
 	}
 
-	if err != nil {
-		return nil, fmt.Errorf("error deserializing struct: %v", err)
-	}
-
-	return struc, nil
+	return nil
 }
 
 func serializeField(writer io.Writer, field interface{}) error {
