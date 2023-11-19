@@ -2,6 +2,7 @@ package connection
 
 import (
 	"PessiTorrent/internal/protocol"
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -11,7 +12,8 @@ import (
 type PacketHandler func(packet interface{}, conn *Connection)
 
 type Connection struct {
-	net.Conn
+	connection   net.Conn
+	readWrite    bufio.ReadWriter
 	writeQueue   chan protocol.Packet
 	handlePacket PacketHandler
 }
@@ -19,6 +21,7 @@ type Connection struct {
 func NewConnection(conn net.Conn, handlePacket PacketHandler) Connection {
 	return Connection{
 		conn,
+		*bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)),
 		make(chan protocol.Packet),
 		handlePacket,
 	}
@@ -30,7 +33,7 @@ func (conn *Connection) Start() {
 }
 
 func (conn *Connection) Stop() {
-	err := conn.Close()
+	err := conn.connection.Close()
 	if err != nil {
 		fmt.Println("error closing connection: ", err)
 	}
@@ -39,9 +42,15 @@ func (conn *Connection) Stop() {
 func (conn *Connection) writeLoop() {
 	for {
 		packet := <-conn.writeQueue
-		err := protocol.SerializePacket(conn, packet)
+		err := protocol.SerializePacket(conn.readWrite, packet)
 		if err != nil {
 			fmt.Println("error serializing packet: ", err)
+			return
+		}
+
+		err = conn.readWrite.Flush()
+		if err != nil {
+			fmt.Println("error flushing buffer: ", err)
 			return
 		}
 	}
@@ -53,10 +62,10 @@ func (conn *Connection) EnqueuePacket(packet protocol.Packet) {
 
 func (conn *Connection) readLoop() {
 	for {
-		packet, err := protocol.DeserializePacket(conn)
+		packet, err := protocol.DeserializePacket(conn.readWrite)
 		if err != nil {
 			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
-				fmt.Println("Connection closed")
+				fmt.Println("connection closed")
 				return
 			}
 			fmt.Println("error reading packet: ", err)
@@ -65,4 +74,8 @@ func (conn *Connection) readLoop() {
 
 		conn.handlePacket(packet, conn)
 	}
+}
+
+func (conn *Connection) RemoteAddr() net.Addr {
+	return conn.connection.RemoteAddr()
 }
