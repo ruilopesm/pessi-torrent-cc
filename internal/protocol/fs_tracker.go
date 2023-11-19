@@ -3,9 +3,8 @@ package protocol
 // NODE -> TRACKER
 
 type InitPacket struct {
-	Reserved uint8
-	UDPPort  uint16
-	IPAddr   [4]byte
+	UDPPort uint16
+	IPAddr  [4]byte
 }
 
 func (ip *InitPacket) GetPacketType() uint8 {
@@ -13,7 +12,6 @@ func (ip *InitPacket) GetPacketType() uint8 {
 }
 
 func (ip *InitPacket) Create(ipAddr [4]byte, udpPort uint16) {
-	ip.Reserved = uint8(0)
 	ip.UDPPort = udpPort
 	ip.IPAddr = ipAddr
 }
@@ -40,7 +38,6 @@ func (pf *PublishFilePacket) Create(name string, fileHash [20]byte, chunkHashes 
 
 type PublishChunkPacket struct {
 	BitfieldSize uint16
-	Reserved     uint8
 	FileHash     [20]byte
 	Bitfield     []byte
 }
@@ -54,14 +51,12 @@ func (pc *PublishChunkPacket) Create(fileHash [20]byte, bitfield []uint16) {
 	bitfieldSize := len(binaryBitField)
 
 	pc.BitfieldSize = uint16(bitfieldSize)
-	pc.Reserved = uint8(0)
 	pc.FileHash = fileHash
 	pc.Bitfield = binaryBitField
 }
 
 type RequestFilePacket struct {
 	NameSize uint8
-	Reserved uint16
 	FileName string
 }
 
@@ -71,7 +66,6 @@ func (rf *RequestFilePacket) GetPacketType() uint8 {
 
 func (rf *RequestFilePacket) Create(fileName string) {
 	rf.NameSize = uint8(len(fileName))
-	rf.Reserved = uint16(0)
 	rf.FileName = fileName
 }
 
@@ -79,7 +73,6 @@ func (rf *RequestFilePacket) Create(fileName string) {
 
 type AlreadyExistsPacket struct {
 	NameSize uint8
-	Reserved uint16
 	FileName string
 }
 
@@ -89,7 +82,6 @@ func (ae *AlreadyExistsPacket) GetPacketType() uint8 {
 
 func (ae *AlreadyExistsPacket) Create(fileName string) {
 	ae.NameSize = uint8(len(fileName))
-	ae.Reserved = uint16(0)
 	ae.FileName = fileName
 }
 
@@ -127,7 +119,6 @@ func (an *AnswerNodesPacket) Create(nNodes uint16, ipAddrs [][4]byte, ports []ui
 
 type RemoveFilePacket struct {
 	NameSize uint8
-	Reserved uint16
 	FileName string
 }
 
@@ -137,6 +128,5 @@ func (rf *RemoveFilePacket) GetPacketType() uint8 {
 
 func (rf *RemoveFilePacket) Create(fileName string) {
 	rf.NameSize = uint8(len(fileName))
-	rf.Reserved = uint16(0)
 	rf.FileName = fileName
 }

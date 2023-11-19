@@ -35,14 +35,14 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 	// Add file to the node's list of files
 	t.nodes.ForEach(func(node *NodeInfo) {
 		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-      chunksAvailable := make([]uint16, len(file.hashes))
-      for i := 0; i < len(file.hashes); i++ {
-        chunksAvailable[i] = uint16(i)
-      }
+			chunksAvailable := make([]uint16, len(file.hashes))
+			for i := 0; i < len(file.hashes); i++ {
+				chunksAvailable[i] = uint16(i)
+			}
 
 			f := NodeFile{
 				file:            &file,
-        chunksAvailable: chunksAvailable,
+				chunksAvailable: chunksAvailable,
 			}
 			node.files.Put(file.name, f)
 		}
