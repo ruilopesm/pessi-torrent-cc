@@ -6,11 +6,11 @@ import (
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/utils"
+	"fmt"
 	"log"
 	"net"
 	"os"
 	"strconv"
-  "fmt"
 )
 
 type Node struct {
@@ -41,7 +41,11 @@ func (n *Node) handlePacket(packet interface{}, conn *connection.Connection) {
 	// log.Println("packet ", packet, " received from ", conn.RemoteAddr())
 	switch data := packet.(type) {
 	case *protocol.PublishFilePacket:
-    n.handleFileHashesPacket(packet.(*protocol.PublishFilePacket), conn)
+		n.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
+	case *protocol.AnswerNodesPacket:
+		n.handleAnswerNodesPacket(packet.(*protocol.AnswerNodesPacket), conn)
+	case *protocol.AlreadyExistsPacket:
+		n.handleAlreadyExistsPacket(packet.(*protocol.AlreadyExistsPacket), conn)
 	default:
 		fmt.Println("unknown packet type received: ", data)
 	}

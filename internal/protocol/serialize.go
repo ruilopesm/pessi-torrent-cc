@@ -115,6 +115,10 @@ func serializeField(writer io.Writer, field interface{}) error {
 		return writeArray(writer, data[:])
 	case [][20]uint8:
 		return writeArray(writer, data)
+	case []NodeFileInfo:
+		return writeArray(writer, data)
+	case NodeFileInfo:
+		return SerializeStruct(writer, data)
 	default:
 		return fmt.Errorf("serialize unsupported type: %T", data)
 	}
@@ -128,6 +132,8 @@ func deserializeToField(reader io.Reader, field any) error {
 		return readString(reader, data)
 	case []uint8:
 		return readArray(reader, &data)
+	case *[]uint8:
+		return readArray(reader, data)
 	case []uint16:
 		return readArray(reader, &data)
 	case []uint32:
@@ -152,6 +158,10 @@ func deserializeToField(reader io.Reader, field any) error {
 		return err
 	case *[][20]uint8:
 		return readArray(reader, data)
+	case *[]NodeFileInfo:
+		return readArray(reader, data)
+	case *NodeFileInfo:
+		return DeserializeToStruct(reader, data)
 	default:
 		return fmt.Errorf("deserialize unsupported type: %T", field)
 	}

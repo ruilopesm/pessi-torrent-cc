@@ -8,22 +8,6 @@ import (
 	"fmt"
 )
 
-// TODO: remove this
-// func (t *Tracker) HandleprotocolDispatcher(packet interface{}, packetType uint8, conn *connection.Connection) {
-// 	switch packetType {
-// 	case protocol.InitType:
-// 		t.handleInitPacket(packet.(*protocol.InitPacket), conn)
-// 	case protocol.PublishFileType:
-// 		t.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
-// 	case protocol.RequestFileType:
-// 		t.handleRequestFilePacket(packet.(*protocol.RequestFilePacket), conn)
-// 	case protocol.RemoveFileType:
-// 		t.handleRemoveFilePacket(packet.(*protocol.RemoveFilePacket), conn)
-// 	default:
-// 		fmt.Println("unknown packet type")
-// 	}
-// }
-
 func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *connection.Connection) {
 	fmt.Printf("init packet received from %s\n", conn.RemoteAddr())
 
@@ -52,7 +36,7 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 	t.nodes.ForEach(func(node *NodeInfo) {
 		if node.conn.RemoteAddr() == conn.RemoteAddr() {
 			f := NodeFile{
-				file: &file,
+				file:            &file,
 				chunksAvailable: make([]uint16, len(file.hashes)),
 			}
 			node.files.Put(file.name, f)
@@ -64,36 +48,33 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 	fmt.Printf("request file packet received from %s\n", conn.RemoteAddr())
 
 	if t.files.Contains(packet.FileName) {
-		var sequenceNumber uint8 = 0
-		var packetsToSend []protocol.AnswerNodesPacket
+		var nNodes uint16
+		var ipAddrs [][4]byte
+		var ports []uint8
+		var bitfields [][]uint16
 
-    var nodes []NodeInfo
 		t.nodes.ForEach(func(node *NodeInfo) {
 			if file, exists := node.files.Get(packet.FileName); exists {
-				var packet protocol.AnswerNodesPacket
-				packet.Create(
-					sequenceNumber,
-					utils.TCPAddrToBytes(node.conn.RemoteAddr()),
-					node.udpPort,
-					file.chunksAvailable,
-				)
-				packetsToSend = append(packetsToSend, packet)
-				sequenceNumber++
+				nNodes++
+				ipAddrs = append(ipAddrs, utils.TCPAddrToBytes(node.conn.RemoteAddr()))
+				ports = append(ports, uint8(node.udpPort))
+				bitfields = append(bitfields, file.chunksAvailable)
 			}
 		})
 
+		// Send file hashes
 		file, _ := t.files.Get(packet.FileName)
-		var packet protocol.PublishFilePacket
-		packet.Create(file.name, file.fileHash, file.hashes)
-		conn.EnqueuePacket(&packet)
-		// Send protocol in reverse order
-		for i := len(packetsToSend) - 1; i >= 0; i-- {
-			conn.EnqueuePacket(&packetsToSend[i])
-		}
+		var pfPacket protocol.PublishFilePacket
+		pfPacket.Create(file.name, file.fileHash, file.hashes)
+		conn.EnqueuePacket(&pfPacket)
+
+		// Send nodes info
+		var anPacket protocol.AnswerNodesPacket
+		anPacket.Create(nNodes, ipAddrs, ports, bitfields)
+		conn.EnqueuePacket(&anPacket)
 	} else {
 		// TODO: send file not found packet
 		fmt.Printf("file %s not found\n", packet.FileName)
-		return
 	}
 }
 

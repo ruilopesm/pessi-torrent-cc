@@ -94,17 +94,17 @@ func (ae *AlreadyExistsPacket) Create(fileName string) {
 }
 
 type AnswerNodesPacket struct {
-  NumberOfNodes uint16
-  Reserved      uint8
-  Nodes         []NodeFileInfo
+	NumberOfNodes uint16
+	Reserved      uint8
+	Nodes         []NodeFileInfo
 }
 
 type NodeFileInfo struct {
-  BitfieldSize uint16
-  Port         uint8
-  IPAddr       [4]byte
-  Reserved     uint8
-  Bitfield     []byte
+	BitfieldSize uint16
+	Port         uint8
+	IPAddr       [4]byte
+	Reserved     uint8
+	Bitfield     []byte
 }
 
 func (an *AnswerNodesPacket) GetPacketType() uint8 {
@@ -112,21 +112,21 @@ func (an *AnswerNodesPacket) GetPacketType() uint8 {
 }
 
 // func (an *AnswerNodesPacket) Create(sequenceNumber uint8, ipAddr [4]byte, udpPort uint16, bitfield []uint16) {
-func (an *AnswerNodesPacket) Create(bitfield []uint16, nNodes uint16, ipAddrs [][4]byte, ports []uint8, bitfields [][]uint16) {
-  an.NumberOfNodes = nNodes
-  an.Reserved = uint8(0)
+func (an *AnswerNodesPacket) Create(nNodes uint16, ipAddrs [][4]byte, ports []uint8, bitfields [][]uint16) {
+	an.NumberOfNodes = nNodes
+	an.Reserved = uint8(0)
 
-  for i := 0; i < int(nNodes); i++ {
-    bitfield := EncodeBitField(bitfields[i])
+	for i := 0; i < int(nNodes); i++ {
+		bitfield := EncodeBitField(bitfields[i])
 
-    node := NodeFileInfo{
-      BitfieldSize: uint16(len(bitfield)),
-      IPAddr: ipAddrs[i],
-      Port: ports[i],
-      Bitfield: bitfield,
-    }
-    an.Nodes = append(an.Nodes, node)
-  }
+		node := NodeFileInfo{
+			BitfieldSize: uint16(len(bitfield)),
+			IPAddr:       ipAddrs[i],
+			Port:         ports[i],
+			Bitfield:     bitfield,
+		}
+		an.Nodes = append(an.Nodes, node)
+	}
 }
 
 type RemoveFilePacket struct {
