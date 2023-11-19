@@ -1,7 +1,7 @@
 package main
 
 import (
-	"PessiTorrent/internal/serialization"
+	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/utils"
 	"fmt"
 	"os"
@@ -18,7 +18,7 @@ type File struct {
 
 func (n *Node) AddFile(filePath string) (*File, error) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Provided file does not exist: %v", filePath)
+		return nil, fmt.Errorf("provided file does not exist: %v", filePath)
 	}
 
 	file, err := os.Open(filePath)
@@ -49,7 +49,7 @@ func (n *Node) AddFile(filePath string) (*File, error) {
 		filepath:    filePath,
 		fileHash:    fileHash,
 		chunkHashes: chunkHashes,
-		bitfield:    serialization.EncodeBitField(bitfield),
+		bitfield:    protocol.EncodeBitField(bitfield),
 	}
 	n.files.Put(filename, &f)
 

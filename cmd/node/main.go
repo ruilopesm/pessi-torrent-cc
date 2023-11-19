@@ -3,9 +3,10 @@ package main
 import (
 	"PessiTorrent/internal/cli"
 	"PessiTorrent/internal/connection"
-	"PessiTorrent/internal/packets"
+	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/utils"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -36,6 +37,20 @@ func NewNode(serverAddr string, listenUDPPort string) Node {
 	}
 }
 
+func (n *Node) handlePacket(packet interface{}, conn *connection.Connection) {
+	// log.Println("packet ", packet, " received from ", conn.RemoteAddr())
+	switch data := packet.(type) {
+	case *protocol.PublishFilePacket:
+		n.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
+	case *protocol.AnswerNodesPacket:
+		n.handleAnswerNodesPacket(packet.(*protocol.AnswerNodesPacket), conn)
+	case *protocol.AlreadyExistsPacket:
+		n.handleAlreadyExistsPacket(packet.(*protocol.AlreadyExistsPacket), conn)
+	default:
+		fmt.Println("unknown packet type received: ", data)
+	}
+}
+
 func (n *Node) Start() error {
 	conn, err := net.Dial("tcp4", n.serverAddr)
 	if err != nil {
@@ -43,17 +58,15 @@ func (n *Node) Start() error {
 	}
 	defer conn.Close()
 
-	n.conn = connection.NewConnection(conn)
+	n.conn = connection.NewConnection(conn, n.handlePacket)
+	go n.conn.Start()
 	n.ipAddr = utils.TCPAddrToBytes(conn.LocalAddr())
 
 	// TODO: Listen on udp
 
-	var packet packets.InitPacket
+	var packet protocol.InitPacket
 	packet.Create(n.ipAddr, n.udpPort)
-	err = n.conn.WritePacket(packet)
-	if err != nil {
-		return err
-	}
+	n.conn.EnqueuePacket(&packet)
 
 	cli := cli.NewCLI(n.stop)
 	cli.AddCommand("request", "<file name>", 1, n.requestFile)

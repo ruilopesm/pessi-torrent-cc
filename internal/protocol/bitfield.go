@@ -1,4 +1,4 @@
-package serialization
+package protocol
 
 // EncodeBitField encodes a bitfield into a byte array
 func EncodeBitField(bitfield []uint16) []byte {

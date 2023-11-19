@@ -1,81 +1,81 @@
 package connection
 
 import (
-	"PessiTorrent/internal/packets"
-	"PessiTorrent/internal/serialization"
-	"encoding/binary"
+	"PessiTorrent/internal/protocol"
+	"bufio"
+	"errors"
+	"fmt"
+	"io"
 	"net"
 )
 
+type PacketHandler func(packet interface{}, conn *Connection)
+
 type Connection struct {
-	conn net.Conn
+	connection   net.Conn
+	readWrite    bufio.ReadWriter
+	writeQueue   chan protocol.Packet
+	handlePacket PacketHandler
 }
 
-func NewConnection(conn net.Conn) Connection {
+func NewConnection(conn net.Conn, handlePacket PacketHandler) Connection {
 	return Connection{
-		conn: conn,
+		conn,
+		*bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)),
+		make(chan protocol.Packet),
+		handlePacket,
 	}
 }
 
-func (c *Connection) WritePacket(packet interface{}) error {
-	data, err := serialization.Serialize(packet)
-	if err != nil {
-		return err
-	}
-
-	// Write packet length
-	err = binary.Write(c.conn, binary.LittleEndian, uint32(len(data)))
-	if err != nil {
-		return err
-	}
-
-	// Write packet data
-	_, err = c.conn.Write(data)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (conn *Connection) Start() {
+	go conn.writeLoop()
+	go conn.readLoop()
 }
 
-func (c *Connection) ReadPacket() (interface{}, uint8, error) {
-	// Read packet length
-	var packetLength uint32
-	err := binary.Read(c.conn, binary.LittleEndian, &packetLength)
+func (conn *Connection) Stop() {
+	err := conn.connection.Close()
 	if err != nil {
-		return nil, 0, err
+		fmt.Println("error closing connection: ", err)
 	}
+}
 
-	// Read packet data
-	data := make([]byte, packetLength)
-	bytesRead := 0 // conn.Read does not guarantee atomic reads
-	for bytesRead < int(packetLength) {
-		n, err := c.conn.Read(data[bytesRead:])
+func (conn *Connection) writeLoop() {
+	for {
+		packet := <-conn.writeQueue
+		err := protocol.SerializePacket(conn.readWrite, packet)
 		if err != nil {
-			return nil, 0, err
+			fmt.Println("error serializing packet: ", err)
+			return
 		}
-		bytesRead += n
+
+		err = conn.readWrite.Flush()
+		if err != nil {
+			fmt.Println("error flushing buffer: ", err)
+			return
+		}
 	}
+}
 
-	// First byte is the packet type
-	packetType := data[0]
-	packetStruct := packets.PacketStructFromType(packetType)
-	err = serialization.Deserialize(data, packetStruct)
-	if err != nil {
-		return nil, 0, err
+func (conn *Connection) EnqueuePacket(packet protocol.Packet) {
+	conn.writeQueue <- packet
+}
+
+func (conn *Connection) readLoop() {
+	for {
+		packet, err := protocol.DeserializePacket(conn.readWrite)
+		if err != nil {
+			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
+				fmt.Println("connection closed")
+				return
+			}
+			fmt.Println("error reading packet: ", err)
+			return
+		}
+
+		conn.handlePacket(packet, conn)
 	}
-
-	return packetStruct, packetType, nil
 }
 
-func (c *Connection) LocalAddr() net.Addr {
-	return c.conn.LocalAddr()
-}
-
-func (c *Connection) RemoteAddr() net.Addr {
-	return c.conn.RemoteAddr()
-}
-
-func (c *Connection) Close() error {
-	return c.conn.Close()
+func (conn *Connection) RemoteAddr() net.Addr {
+	return conn.connection.RemoteAddr()
 }

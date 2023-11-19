@@ -2,6 +2,7 @@ package main
 
 import (
 	"PessiTorrent/internal/connection"
+	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
 	"fmt"
 	"log"
@@ -67,42 +68,26 @@ func (t *Tracker) acceptLoop() {
 			fmt.Println("accept error:", err)
 			continue
 		}
-		conn := connection.NewConnection(c)
+		conn := connection.NewConnection(c, t.handlePacket)
 		fmt.Printf("node %s connected\n", conn.RemoteAddr())
 
-		go t.handleConnection(&conn)
+		go conn.Start()
 	}
 }
 
-func (t *Tracker) handleConnection(conn *connection.Connection) {
-	defer conn.Close()
-
-	for {
-		packet, packetType, err := conn.ReadPacket()
-		if err != nil {
-			if err.Error() != "EOF" {
-				fmt.Println("read error:", err)
-			} else {
-				fmt.Printf("node %s disconnected\n", conn.RemoteAddr())
-				t.removeNode(conn)
-			}
-
-			return
-		}
-
-		t.HandlePacketsDispatcher(packet, packetType, conn)
+func (t *Tracker) handlePacket(packet interface{}, conn *connection.Connection) {
+	switch data := packet.(type) {
+	case *protocol.InitPacket:
+		t.handleInitPacket(packet.(*protocol.InitPacket), conn)
+	case *protocol.PublishFilePacket:
+		t.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
+	case *protocol.RequestFilePacket:
+		t.handleRequestFilePacket(packet.(*protocol.RequestFilePacket), conn)
+	case *protocol.RemoveFilePacket:
+		t.handleRemoveFilePacket(packet.(*protocol.RemoveFilePacket), conn)
+	default:
+		fmt.Println("unknown packet type received: ", data)
 	}
-}
-
-func (t *Tracker) removeNode(conn *connection.Connection) {
-	t.nodes.ForEach(func(node *NodeInfo) {
-		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-			fmt.Println("removed node", node.conn.RemoteAddr())
-			t.nodes.Remove(node)
-
-			return
-		}
-	})
 }
 
 func main() {

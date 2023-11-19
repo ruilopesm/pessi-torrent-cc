@@ -1,7 +1,7 @@
 package main
 
 import (
-	"PessiTorrent/internal/packets"
+	"PessiTorrent/internal/protocol"
 	"fmt"
 	"os"
 )
@@ -10,46 +10,9 @@ import (
 func (n *Node) requestFile(args []string) error {
 	filename := args[0]
 
-	var packet packets.RequestFilePacket
+	var packet protocol.RequestFilePacket
 	packet.Create(filename)
-	err := n.conn.WritePacket(packet)
-	if err != nil {
-		return err
-	}
-
-	// TODO: handle file not found packet
-	fileHashesPacket, _, err := n.conn.ReadPacket()
-	if err != nil {
-		return err
-	}
-
-	pf := fileHashesPacket.(*packets.PublishFilePacket)
-	f := File{
-		filename:    filename,
-		fileHash:    pf.FileHash,
-		chunkHashes: pf.ChunkHashes,
-	}
-	n.files.Put(filename, &f)
-
-	// Read response packets
-	responsePacket, _, err := n.conn.ReadPacket()
-	fmt.Printf("node %v, %v has the file\n", responsePacket.(*packets.AnswerNodesPacket).NodeIPAddr, responsePacket.(*packets.AnswerNodesPacket).UDPPort)
-	if err != nil {
-		return err
-	}
-
-	// Read response packets
-	for {
-		if responsePacket.(*packets.AnswerNodesPacket).SequenceNumber == 0 {
-			break
-		}
-
-		responsePacket, _, err = n.conn.ReadPacket()
-		fmt.Printf("node %v, %v has the file\n", responsePacket.(*packets.AnswerNodesPacket).NodeIPAddr, responsePacket.(*packets.AnswerNodesPacket).UDPPort)
-		if err != nil {
-			return err
-		}
-	}
+	n.conn.EnqueuePacket(&packet)
 
 	return nil
 }
@@ -94,19 +57,17 @@ func (n *Node) publish(args []string) error {
 		}
 
 		fmt.Println("Sending file to tracker:", filePath)
-		var packet packets.PublishFilePacket
+
+		var packet protocol.PublishFilePacket
 		packet.Create(f.filename, f.fileHash, f.chunkHashes)
-		err = n.conn.WritePacket(packet)
-		if err != nil {
-			return err
-		}
+		n.conn.EnqueuePacket(&packet)
 	}
 
 	return nil
 }
 
 // status
-func (n *Node) status(args []string) error {
+func (n *Node) status(_ []string) error {
 	n.files.ForEach(func(filename string, file *File) {
 		fmt.Println("----------------------------------------")
 		fmt.Printf("File: %v\n", file.filename)
@@ -124,13 +85,10 @@ func (n *Node) removeFile(args []string) error {
 
 	n.RemoveFile(filename)
 
-	var packet packets.RemoveFilePacket
+	var packet protocol.RemoveFilePacket
 	packet.Create(filename)
 
-	err := n.conn.WritePacket(packet)
-	if err != nil {
-		return err
-	}
+	n.conn.EnqueuePacket(&packet)
 
 	return nil
 }
