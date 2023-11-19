@@ -10,8 +10,7 @@ import (
 func (n *Node) requestFile(args []string) error {
 	filename := args[0]
 
-	var packet protocol.RequestFilePacket
-	packet.Create(filename)
+	packet := protocol.NewRequestFIlePacket(filename)
 	n.conn.EnqueuePacket(&packet)
 
 	return nil
@@ -58,8 +57,7 @@ func (n *Node) publish(args []string) error {
 
 		fmt.Println("Sending file to tracker:", filePath)
 
-		var packet protocol.PublishFilePacket
-		packet.Create(f.filename, f.fileHash, f.chunkHashes)
+		packet := protocol.NewPublishFilePacket(f.filename, f.fileHash, f.chunkHashes)
 		n.conn.EnqueuePacket(&packet)
 	}
 
@@ -85,9 +83,7 @@ func (n *Node) removeFile(args []string) error {
 
 	n.RemoveFile(filename)
 
-	var packet protocol.RemoveFilePacket
-	packet.Create(filename)
-
+	packet := protocol.NewRemoveFilePacket(filename)
 	n.conn.EnqueuePacket(&packet)
 
 	return nil

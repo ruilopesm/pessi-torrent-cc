@@ -69,13 +69,11 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 
 		// Send file hashes
 		file, _ := t.files.Get(packet.FileName)
-		var pfPacket protocol.PublishFilePacket
-		pfPacket.Create(file.name, file.fileHash, file.hashes)
+		pfPacket := protocol.NewPublishFilePacket(file.name, file.fileHash, file.hashes)
 		conn.EnqueuePacket(&pfPacket)
 
 		// Send nodes info
-		var anPacket protocol.AnswerNodesPacket
-		anPacket.Create(nNodes, ipAddrs, ports, bitfields)
+		anPacket := protocol.NewAnswerNodesPacket(nNodes, ipAddrs, ports, bitfields)
 		conn.EnqueuePacket(&anPacket)
 	} else {
 		// TODO: send file not found packet

@@ -39,13 +39,14 @@ func (c *CLI) Start() {
 	c.help()
 
 	for {
-		fmt.Print("> ")
+		fmt.Printf("> ")
 
 		reader := bufio.NewReader(os.Stdin)
 		input, err := reader.ReadString('\n')
 		if err != nil {
 			continue
 		}
+
 		input = strings.TrimSuffix(input, "\n")
 		input = strings.TrimSuffix(input, "\r") // Windows
 
