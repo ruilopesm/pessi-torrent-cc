@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+  "fmt"
 )
 
 type Node struct {
@@ -37,7 +38,13 @@ func NewNode(serverAddr string, listenUDPPort string) Node {
 }
 
 func (n *Node) handlePacket(packet interface{}, conn *connection.Connection) {
-	log.Println("packet ", packet, " received from ", conn.RemoteAddr())
+	// log.Println("packet ", packet, " received from ", conn.RemoteAddr())
+	switch data := packet.(type) {
+	case *protocol.PublishFilePacket:
+    n.handleFileHashesPacket(packet.(*protocol.PublishFilePacket), conn)
+	default:
+		fmt.Println("unknown packet type received: ", data)
+	}
 }
 
 func (n *Node) Start() error {

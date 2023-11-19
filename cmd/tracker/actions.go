@@ -8,20 +8,21 @@ import (
 	"fmt"
 )
 
-func (t *Tracker) HandleprotocolDispatcher(packet interface{}, packetType uint8, conn *connection.Connection) {
-	switch packetType {
-	case protocol.InitType:
-		t.handleInitPacket(packet.(*protocol.InitPacket), conn)
-	case protocol.PublishFileType:
-		t.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
-	case protocol.RequestFileType:
-		t.handleRequestFilePacket(packet.(*protocol.RequestFilePacket), conn)
-	case protocol.RemoveFileType:
-		t.handleRemoveFilePacket(packet.(*protocol.RemoveFilePacket), conn)
-	default:
-		fmt.Println("unknown packet type")
-	}
-}
+// TODO: remove this
+// func (t *Tracker) HandleprotocolDispatcher(packet interface{}, packetType uint8, conn *connection.Connection) {
+// 	switch packetType {
+// 	case protocol.InitType:
+// 		t.handleInitPacket(packet.(*protocol.InitPacket), conn)
+// 	case protocol.PublishFileType:
+// 		t.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
+// 	case protocol.RequestFileType:
+// 		t.handleRequestFilePacket(packet.(*protocol.RequestFilePacket), conn)
+// 	case protocol.RemoveFileType:
+// 		t.handleRemoveFilePacket(packet.(*protocol.RemoveFilePacket), conn)
+// 	default:
+// 		fmt.Println("unknown packet type")
+// 	}
+// }
 
 func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *connection.Connection) {
 	fmt.Printf("init packet received from %s\n", conn.RemoteAddr())
@@ -67,6 +68,7 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 		var sequenceNumber uint8 = 0
 		var packetsToSend []protocol.AnswerNodesPacket
 
+    var nodes []NodeInfo
 		t.nodes.ForEach(func(node *NodeInfo) {
 			if file, exists := node.files.Get(packet.FileName); exists {
 				var packet protocol.AnswerNodesPacket
