@@ -62,32 +62,28 @@ func TestBytes(t *testing.T) {
 
 func TestSerialize(t *testing.T) {
 	// create dummy PublishFilePacket
-	var packet PublishFilePacket
-	packet.Create("test.txt", [20]byte{1, 2, 3, 4, 5}, [][20]byte{{6, 7, 8}, {9, 10, 11}})
+	packet := NewPublishFilePacket("test.txt", [20]byte{1, 2, 3, 4, 5}, [][20]byte{{6, 7, 8}, {9, 10, 11}})
 
 	var deserialize PublishFilePacket
 	testSerializeStruct(&packet, &deserialize, t)
 	checkEquals(packet, deserialize, t)
 
 	// create dummy InitPacket
-	var initPacket InitPacket
-	initPacket.Create([4]byte{1, 2, 3, 4}, 1234)
+	initPacket := NewInitPacket([4]byte{1, 2, 3, 4}, 1234)
 
 	var deserializeInit InitPacket
 	testSerializeStruct(&initPacket, &deserializeInit, t)
 	checkEquals(initPacket, deserializeInit, t)
 
 	// create dummy PublishChunkPacket
-	var publishChunkPacket PublishChunkPacket
-	publishChunkPacket.Create([20]byte{1, 2, 3, 4, 5}, []uint16{1, 2, 3, 4, 5})
+	publishChunkPacket := NewPublishChunkPacket([20]byte{1, 2, 3, 4, 5}, []uint16{1, 2, 3, 4, 5})
 
 	var deserializePublishChunk PublishChunkPacket
 	testSerializeStruct(&publishChunkPacket, &deserializePublishChunk, t)
 	checkEquals(publishChunkPacket, deserializePublishChunk, t)
 
 	// create dummy AnswerNodesPacket
-	var answerNodesPacket AnswerNodesPacket
-	answerNodesPacket.Create(1, [][4]byte{{1, 2, 3, 4}}, []uint16{1, 2, 3, 4, 5}, [][]uint16{{1, 2, 3, 4, 5}})
+	answerNodesPacket := NewAnswerNodesPacket(1, [][4]byte{{1, 2, 3, 4}}, []uint16{1, 2, 3, 4, 5}, [][]uint16{{1, 2, 3, 4, 5}})
 
 	var deserializeAnswerNodes AnswerNodesPacket
 	testSerializeStruct(&answerNodesPacket, &deserializeAnswerNodes, t)

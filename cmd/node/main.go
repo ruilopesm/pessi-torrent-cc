@@ -64,8 +64,7 @@ func (n *Node) Start() error {
 
 	// TODO: Listen on udp
 
-	var packet protocol.InitPacket
-	packet.Create(n.ipAddr, n.udpPort)
+	packet := protocol.NewInitPacket(n.ipAddr, n.udpPort)
 	n.conn.EnqueuePacket(&packet)
 
 	cli := cli.NewCLI(n.stop)

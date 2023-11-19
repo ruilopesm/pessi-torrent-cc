@@ -11,9 +11,11 @@ func (ip *InitPacket) GetPacketType() uint8 {
 	return InitType
 }
 
-func (ip *InitPacket) Create(ipAddr [4]byte, udpPort uint16) {
-	ip.UDPPort = udpPort
-	ip.IPAddr = ipAddr
+func NewInitPacket(ipAddr [4]byte, udpPort uint16) InitPacket {
+	return InitPacket{
+		UDPPort: udpPort,
+		IPAddr:  ipAddr,
+	}
 }
 
 type PublishFilePacket struct {
@@ -28,12 +30,14 @@ func (pf *PublishFilePacket) GetPacketType() uint8 {
 	return PublishFileType
 }
 
-func (pf *PublishFilePacket) Create(name string, fileHash [20]byte, chunkHashes [][20]byte) {
-	pf.NameSize = uint8(len(name))
-	pf.NumberOfChunks = uint16(len(chunkHashes))
-	pf.FileHash = fileHash
-	pf.FileName = name
-	pf.ChunkHashes = chunkHashes
+func NewPublishFilePacket(fileName string, fileHash [20]byte, chunkHashes [][20]byte) PublishFilePacket {
+	return PublishFilePacket{
+		NameSize:       uint8(len(fileName)),
+		NumberOfChunks: uint16(len(chunkHashes)),
+		FileHash:       fileHash,
+		FileName:       fileName,
+		ChunkHashes:    chunkHashes,
+	}
 }
 
 type PublishChunkPacket struct {
@@ -46,13 +50,15 @@ func (pc *PublishChunkPacket) GetPacketType() uint8 {
 	return PublishChunkType
 }
 
-func (pc *PublishChunkPacket) Create(fileHash [20]byte, bitfield []uint16) {
-	binaryBitField := EncodeBitField(bitfield)
-	bitfieldSize := len(binaryBitField)
+func NewPublishChunkPacket(fileHash [20]byte, bitfield []uint16) PublishChunkPacket {
+	binaryBitfield := EncodeBitField(bitfield)
+	bitfieldSize := len(binaryBitfield)
 
-	pc.BitfieldSize = uint16(bitfieldSize)
-	pc.FileHash = fileHash
-	pc.Bitfield = binaryBitField
+	return PublishChunkPacket{
+		BitfieldSize: uint16(bitfieldSize),
+		FileHash:     fileHash,
+		Bitfield:     binaryBitfield,
+	}
 }
 
 type RequestFilePacket struct {
@@ -64,9 +70,11 @@ func (rf *RequestFilePacket) GetPacketType() uint8 {
 	return RequestFileType
 }
 
-func (rf *RequestFilePacket) Create(fileName string) {
-	rf.NameSize = uint8(len(fileName))
-	rf.FileName = fileName
+func NewRequestFIlePacket(fileName string) RequestFilePacket {
+	return RequestFilePacket{
+		NameSize: uint8(len(fileName)),
+		FileName: fileName,
+	}
 }
 
 // TRACKER -> NODE
@@ -80,9 +88,11 @@ func (ae *AlreadyExistsPacket) GetPacketType() uint8 {
 	return AlreadyExistsType
 }
 
-func (ae *AlreadyExistsPacket) Create(fileName string) {
-	ae.NameSize = uint8(len(fileName))
-	ae.FileName = fileName
+func NewAlreadyExistsPacket(fileName string) AlreadyExistsPacket {
+	return AlreadyExistsPacket{
+		NameSize: uint8(len(fileName)),
+		FileName: fileName,
+	}
 }
 
 type AnswerNodesPacket struct {
@@ -101,8 +111,10 @@ func (an *AnswerNodesPacket) GetPacketType() uint8 {
 	return AnswerNodesType
 }
 
-func (an *AnswerNodesPacket) Create(nNodes uint16, ipAddrs [][4]byte, ports []uint16, bitfields [][]uint16) {
-	an.NumberOfNodes = nNodes
+func NewAnswerNodesPacket(nNodes uint16, ipAddrs [][4]byte, ports []uint16, bitfields [][]uint16) AnswerNodesPacket {
+	an := AnswerNodesPacket{
+		NumberOfNodes: nNodes,
+	}
 
 	for i := 0; i < int(nNodes); i++ {
 		bitfield := EncodeBitField(bitfields[i])
@@ -115,6 +127,8 @@ func (an *AnswerNodesPacket) Create(nNodes uint16, ipAddrs [][4]byte, ports []ui
 		}
 		an.Nodes = append(an.Nodes, node)
 	}
+
+	return an
 }
 
 type RemoveFilePacket struct {
@@ -126,7 +140,9 @@ func (rf *RemoveFilePacket) GetPacketType() uint8 {
 	return RemoveFileType
 }
 
-func (rf *RemoveFilePacket) Create(fileName string) {
-	rf.NameSize = uint8(len(fileName))
-	rf.FileName = fileName
+func NewRemoveFilePacket(fileName string) RemoveFilePacket {
+	return RemoveFilePacket{
+		NameSize: uint8(len(fileName)),
+		FileName: fileName,
+	}
 }
