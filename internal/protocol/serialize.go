@@ -14,9 +14,9 @@ func SerializePacket(writer io.Writer, packet Packet) error {
 		return err
 	}
 
-	err2 := SerializeStruct(writer, packet)
-	if err2 != nil {
-		return err2
+	err = SerializeStruct(writer, packet)
+	if err != nil {
+		return err
 	}
 
 	return nil
