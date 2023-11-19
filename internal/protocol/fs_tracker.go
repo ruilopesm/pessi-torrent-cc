@@ -1,6 +1,5 @@
 package protocol
 
-
 // NODE -> TRACKER
 
 type InitPacket struct {
@@ -110,7 +109,6 @@ func (an *AnswerNodesPacket) GetPacketType() uint8 {
 	return AnswerNodesType
 }
 
-// func (an *AnswerNodesPacket) Create(sequenceNumber uint8, ipAddr [4]byte, udpPort uint16, bitfield []uint16) {
 func (an *AnswerNodesPacket) Create(nNodes uint16, ipAddrs [][4]byte, ports []uint16, bitfields [][]uint16) {
 	an.NumberOfNodes = nNodes
 

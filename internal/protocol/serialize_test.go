@@ -3,8 +3,32 @@ package protocol
 import (
 	"bufio"
 	"bytes"
+	"fmt"
+	"reflect"
 	"testing"
 )
+
+func testSerializeStruct(struc interface{}, deserialize interface{}, t *testing.T) {
+	buffer := bytes.Buffer{}
+	writer := bufio.NewWriter(&buffer)
+
+	err := SerializeStruct(writer, struc)
+	if err != nil {
+		t.Fatalf("error serializing struct: %v", err)
+	}
+
+	err = writer.Flush()
+	if err != nil {
+		t.Fatalf("error serializing struct: %v", err)
+	}
+
+	reader := bufio.NewReader(&buffer)
+
+	err = DeserializeToStruct(reader, deserialize)
+	if err != nil {
+		t.Fatalf("error serializing struct: %v", err)
+	}
+}
 
 func TestBytes(t *testing.T) {
 	buffer := bytes.Buffer{}
@@ -41,57 +65,40 @@ func TestSerialize(t *testing.T) {
 	var packet PublishFilePacket
 	packet.Create("test.txt", [20]byte{1, 2, 3, 4, 5}, [][20]byte{{6, 7, 8}, {9, 10, 11}})
 
-	//create dummy writer
-	buffer := bytes.Buffer{}
+	var deserialize PublishFilePacket
+	testSerializeStruct(&packet, &deserialize, t)
+	checkEquals(packet, deserialize, t)
 
-	writer := bufio.NewWriter(&buffer)
+	// create dummy InitPacket
+	var initPacket InitPacket
+	initPacket.Create([4]byte{1, 2, 3, 4}, 1234)
 
-	// serialize packet
-	err := SerializePacket(writer, &packet)
-	if err != nil {
-		t.Fatalf("error serializing packet: %v", err)
-	}
+	var deserializeInit InitPacket
+	testSerializeStruct(&initPacket, &deserializeInit, t)
+	checkEquals(initPacket, deserializeInit, t)
 
-	// flush buffer
-	err = writer.Flush()
-	if err != nil {
-		t.Fatalf("error flushing buffer: %v", err)
-	}
+	// create dummy PublishChunkPacket
+	var publishChunkPacket PublishChunkPacket
+	publishChunkPacket.Create([20]byte{1, 2, 3, 4, 5}, []uint16{1, 2, 3, 4, 5})
 
-	// create dummy reader
-	reader := bufio.NewReader(&buffer)
+	var deserializePublishChunk PublishChunkPacket
+	testSerializeStruct(&publishChunkPacket, &deserializePublishChunk, t)
+	checkEquals(publishChunkPacket, deserializePublishChunk, t)
 
-	// deserialize packet
-	packet2, err := DeserializePacket(reader)
-	if err != nil {
-		t.Fatalf("error deserializing packet: %v", err)
-	}
-	var deserialized = packet2.(*PublishFilePacket)
+	// create dummy AnswerNodesPacket
+	var answerNodesPacket AnswerNodesPacket
+	answerNodesPacket.Create(1, [][4]byte{{1, 2, 3, 4}}, []uint16{1, 2, 3, 4, 5}, [][]uint16{{1, 2, 3, 4, 5}})
 
-	if packet.NameSize != deserialized.NameSize {
-		t.Fatalf("packet.NameSize != deserialized.NameSize")
-	}
+	var deserializeAnswerNodes AnswerNodesPacket
+	testSerializeStruct(&answerNodesPacket, &deserializeAnswerNodes, t)
+	checkEquals(answerNodesPacket, deserializeAnswerNodes, t)
+}
 
-	if packet.NumberOfChunks != deserialized.NumberOfChunks {
-		t.Fatalf("packet.NumberOfChunks != deserialized.NumberOfChunks")
-	}
-
-	if packet.FileHash != deserialized.FileHash {
-		t.Fatalf("packet.FileHash != deserialized.FileHash")
-	}
-
-	if packet.FileName != deserialized.FileName {
-		t.Fatalf("packet.FileName != deserialized.FileName")
-	}
-
-	if len(packet.ChunkHashes) != len(deserialized.ChunkHashes) {
-		t.Fatalf("len(packet.ChunkHashes) != len(deserialized.ChunkHashes)")
-	}
-
-	for i := 0; i < len(packet.ChunkHashes); i++ {
-		if packet.ChunkHashes[i] != deserialized.ChunkHashes[i] {
-			t.Fatalf("packet.ChunkHashes[i] != deserialized.ChunkHashes[i]")
-		}
+func checkEquals(a interface{}, b interface{}, t *testing.T) {
+	fmt.Printf("a: %v\n", a)
+	fmt.Printf("b: %v\n", b)
+	if !reflect.DeepEqual(a, b) {
+		t.Fatalf("a != b")
 	}
 }
 
@@ -108,32 +115,8 @@ func TestSerializeStructInsideStruct(t *testing.T) {
 	struc.InnerStruct.Number = 1
 	struc.Number = 2
 
-	buffer := bytes.Buffer{}
-	writer := bufio.NewWriter(&buffer)
+	var deserialize TestStruct
 
-	err := SerializeStruct(writer, &struc)
-	if err != nil {
-		t.Fatalf("error serializing struct: %v", err)
-	}
-
-	err = writer.Flush()
-	if err != nil {
-		t.Fatalf("error flushing buffer: %v", err)
-	}
-
-	reader := bufio.NewReader(&buffer)
-
-	var struc2 TestStruct
-	err = DeserializeToStruct(reader, &struc2)
-	if err != nil {
-		t.Fatalf("error deserializing struct: %v", err)
-	}
-
-	if struc2.InnerStruct.Number != 1 {
-		t.Fatalf("struc2.InnerStruct.Number != 1")
-	}
-
-	if struc2.Number != 2 {
-		t.Fatalf("struc2.Number != 2")
-	}
+	testSerializeStruct(&struc, &deserialize, t)
+	checkEquals(struc, deserialize, t)
 }
