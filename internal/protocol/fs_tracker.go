@@ -101,7 +101,7 @@ type AnswerNodesPacket struct {
 
 type NodeFileInfo struct {
 	BitfieldSize uint16
-	Port         uint8
+	Port         uint16
 	IPAddr       [4]byte
 	Reserved     uint8
 	Bitfield     []byte
@@ -112,7 +112,7 @@ func (an *AnswerNodesPacket) GetPacketType() uint8 {
 }
 
 // func (an *AnswerNodesPacket) Create(sequenceNumber uint8, ipAddr [4]byte, udpPort uint16, bitfield []uint16) {
-func (an *AnswerNodesPacket) Create(nNodes uint16, ipAddrs [][4]byte, ports []uint8, bitfields [][]uint16) {
+func (an *AnswerNodesPacket) Create(nNodes uint16, ipAddrs [][4]byte, ports []uint16, bitfields [][]uint16) {
 	an.NumberOfNodes = nNodes
 	an.Reserved = uint8(0)
 

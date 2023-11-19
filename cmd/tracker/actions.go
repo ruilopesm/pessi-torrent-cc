@@ -50,14 +50,14 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 	if t.files.Contains(packet.FileName) {
 		var nNodes uint16
 		var ipAddrs [][4]byte
-		var ports []uint8
+		var ports []uint16
 		var bitfields [][]uint16
 
 		t.nodes.ForEach(func(node *NodeInfo) {
 			if file, exists := node.files.Get(packet.FileName); exists {
 				nNodes++
 				ipAddrs = append(ipAddrs, utils.TCPAddrToBytes(node.conn.RemoteAddr()))
-				ports = append(ports, uint8(node.udpPort))
+				ports = append(ports, uint16(node.udpPort))
 				bitfields = append(bitfields, file.chunksAvailable)
 			}
 		})
