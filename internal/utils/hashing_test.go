@@ -2,9 +2,9 @@ package utils
 
 import (
 	"crypto/sha1"
+	"io"
 	"os"
 	"testing"
-  "io"
 )
 
 func TestHashFile(t *testing.T) {

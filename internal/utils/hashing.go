@@ -9,16 +9,16 @@ import (
 )
 
 func HashFile(file *os.File) ([20]byte, error) {
-  h := sha1.New()
-  if _, err := io.Copy(h, file); err != nil {
-    return [20]byte{}, fmt.Errorf("error copying file: %v", err)
-  }
+	h := sha1.New()
+	if _, err := io.Copy(h, file); err != nil {
+		return [20]byte{}, fmt.Errorf("error copying file: %v", err)
+	}
 
-  hash := h.Sum(nil)
-  var hashArr [20]byte
-  copy(hashArr[:], hash[:20])
+	hash := h.Sum(nil)
+	var hashArr [20]byte
+	copy(hashArr[:], hash[:20])
 
-  return hashArr, nil
+	return hashArr, nil
 }
 
 func HashFileChunks(file *os.File, dest *[][20]byte) error {
