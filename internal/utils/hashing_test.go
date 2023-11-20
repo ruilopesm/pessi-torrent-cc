@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"os"
 	"testing"
+  "io"
 )
 
 func TestHashFile(t *testing.T) {
@@ -22,7 +23,13 @@ func TestHashFile(t *testing.T) {
 		t.Fatalf("Error writing to temporary file: %v", err)
 	}
 
-	// Calculate the expected hash using the same logic as HashFile function
+	// Rewind the file to the beginning before hashing
+	_, err = tempFile.Seek(0, io.SeekStart)
+	if err != nil {
+		t.Fatalf("Error seeking to the beginning of the file: %v", err)
+	}
+
+	// Calculate the expected hash by hashing the content read from the file
 	expectedHash := sha1.Sum([]byte(testContent))
 
 	// Call the HashFile function with the temporary file

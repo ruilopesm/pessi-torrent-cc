@@ -9,22 +9,16 @@ import (
 )
 
 func HashFile(file *os.File) ([20]byte, error) {
-	_, err := file.Seek(0, 0)
-	if err != nil {
-		return [20]byte{}, fmt.Errorf("error seeking file: %v", err)
-	}
+  h := sha1.New()
+  if _, err := io.Copy(h, file); err != nil {
+    return [20]byte{}, fmt.Errorf("error copying file: %v", err)
+  }
 
-	content, err := io.ReadAll(file)
-	if err != nil {
-		return [20]byte{}, fmt.Errorf("error reading file content: %v", err)
-	}
+  hash := h.Sum(nil)
+  var hashArr [20]byte
+  copy(hashArr[:], hash[:20])
 
-	_, err = file.Seek(0, 0)
-	if err != nil {
-		return [20]byte{}, fmt.Errorf("error seeking file: %v", err)
-	}
-
-	return sha1.Sum(content), nil
+  return hashArr, nil
 }
 
 func HashFileChunks(file *os.File, dest *[][20]byte) error {
