@@ -7,25 +7,21 @@ import (
 )
 
 func (n *Node) handlePublishFilePacket(packet *protocol.PublishFilePacket, conn *connection.Connection) {
-	fmt.Printf("publish file packet received from %s\n", conn.RemoteAddr())
+	fmt.Printf("Publish file packet received from %s\n", conn.RemoteAddr())
 
-	f := File{
-		filename:    packet.FileName,
-		fileHash:    packet.FileHash,
-		chunkHashes: packet.ChunkHashes,
-	}
-	n.files.Put(packet.FileName, &f)
+	file := NewFile(packet.FileName, packet.FileHash, packet.ChunkHashes)
+	n.files.Put(packet.FileName, &file)
 }
 
 func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn *connection.Connection) {
-	fmt.Printf("answer nodes packet received from %s\n", conn.RemoteAddr())
-	fmt.Printf("number of nodes who got requested file: %d\n", packet.NumberOfNodes)
+	fmt.Printf("Answer nodes packet received from %s\n", conn.RemoteAddr())
+	fmt.Printf("Number of nodes who got requested file: %d\n", packet.NumberOfNodes)
 
 	for _, node := range packet.Nodes {
-		fmt.Printf("node %v:%d has the file chunks %b\n", node.IPAddr, node.Port, node.Bitfield)
+		fmt.Printf("Node %v:%d has the file chunks %b\n", node.IPAddr, node.Port, node.Bitfield)
 	}
 }
 
 func (n *Node) handleAlreadyExistsPacket(packet *protocol.AlreadyExistsPacket, conn *connection.Connection) {
-	fmt.Printf("file %s already exists\n", packet.FileName)
+	fmt.Printf("File %s already exists\n", packet.Filename)
 }

@@ -30,3 +30,15 @@ func TestUDPAddrToBytes(t *testing.T) {
 		t.Errorf("UDPAddrToBytes: expected %v, got %v", expected, result)
 	}
 }
+
+func TestStrToUDPPort(t *testing.T) {
+	result, err := StrToUDPPort("8080")
+	if err != nil {
+		t.Errorf("StrToUDPPort: unexpected error: %v", err)
+	}
+
+	expected := uint16(8080)
+	if result != expected {
+		t.Errorf("StrToUDPPort: expected %v, got %v", expected, result)
+	}
+}

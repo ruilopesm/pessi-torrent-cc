@@ -9,7 +9,7 @@ import (
 )
 
 func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *connection.Connection) {
-	fmt.Printf("init packet received from %s\n", conn.RemoteAddr())
+	fmt.Printf("Init packet received from %s\n", conn.RemoteAddr())
 
 	info := NodeInfo{
 		conn:    *conn,
@@ -18,25 +18,21 @@ func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *connection
 	}
 	t.nodes.Add(&info)
 
-	fmt.Printf("registered node with data: %v, %v\n", packet.IPAddr, packet.UDPPort)
+	fmt.Printf("Registered node with data: %v, %v\n", packet.IPAddr, packet.UDPPort)
 }
 
 func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, conn *connection.Connection) {
-	fmt.Printf("publish file packet received from %s\n", conn.RemoteAddr())
+	fmt.Printf("Publish file packet received from %s\n", conn.RemoteAddr())
 
 	// Add file to the tracker
-	file := File{
-		name:     packet.FileName,
-		fileHash: packet.FileHash,
-		hashes:   packet.ChunkHashes,
-	}
-	t.files.Put(file.name, &file)
+	file := NewFile(packet.FileName, packet.FileHash, packet.ChunkHashes)
+	t.AddFile(file)
 
 	// Add file to the node's list of files
 	t.nodes.ForEach(func(node *NodeInfo) {
 		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-			chunksAvailable := make([]uint16, len(file.hashes))
-			for i := 0; i < len(file.hashes); i++ {
+			chunksAvailable := make([]uint16, len(file.chunkHashes))
+			for i := 0; i < len(file.chunkHashes); i++ {
 				chunksAvailable[i] = uint16(i)
 			}
 
@@ -44,13 +40,13 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 				file:            &file,
 				chunksAvailable: chunksAvailable,
 			}
-			node.files.Put(file.name, f)
+			node.files.Put(file.filename, f)
 		}
 	})
 }
 
 func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, conn *connection.Connection) {
-	fmt.Printf("request file packet received from %s\n", conn.RemoteAddr())
+	fmt.Printf("Request file packet received from %s\n", conn.RemoteAddr())
 
 	if t.files.Contains(packet.FileName) {
 		var nNodes uint16
@@ -67,9 +63,9 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 			}
 		})
 
-		// Send file hashes
+		// Send file/chunks hashes
 		file, _ := t.files.Get(packet.FileName)
-		pfPacket := protocol.NewPublishFilePacket(file.name, file.fileHash, file.hashes)
+		pfPacket := protocol.NewPublishFilePacket(file.filename, file.fileHash, file.chunkHashes)
 		conn.EnqueuePacket(&pfPacket)
 
 		// Send nodes info
@@ -77,12 +73,12 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 		conn.EnqueuePacket(&anPacket)
 	} else {
 		// TODO: send file not found packet
-		fmt.Printf("file %s not found\n", packet.FileName)
+		fmt.Printf("File %s not found\n", packet.FileName)
 	}
 }
 
 func (t *Tracker) handleRemoveFilePacket(packet *protocol.RemoveFilePacket, conn *connection.Connection) {
-	fmt.Printf("remove file packet received from %s\n", conn.RemoteAddr())
+	fmt.Printf("Remove file packet received from %s\n", conn.RemoteAddr())
 
 	t.nodes.ForEach(func(node *NodeInfo) {
 		if node.conn.RemoteAddr() != conn.RemoteAddr() {

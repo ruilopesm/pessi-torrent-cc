@@ -35,7 +35,7 @@ func (conn *Connection) Start() {
 func (conn *Connection) Stop() {
 	err := conn.connection.Close()
 	if err != nil {
-		fmt.Println("error closing connection: ", err)
+		fmt.Println("Error closing connection: ", err)
 	}
 }
 
@@ -44,13 +44,13 @@ func (conn *Connection) writeLoop() {
 		packet := <-conn.writeQueue
 		err := protocol.SerializePacket(conn.readWrite, packet)
 		if err != nil {
-			fmt.Println("error serializing packet: ", err)
+			fmt.Println("Error serializing packet: ", err)
 			return
 		}
 
 		err = conn.readWrite.Flush()
 		if err != nil {
-			fmt.Println("error flushing buffer: ", err)
+			fmt.Println("Error flushing buffer: ", err)
 			return
 		}
 	}
@@ -65,15 +65,19 @@ func (conn *Connection) readLoop() {
 		packet, err := protocol.DeserializePacket(conn.readWrite)
 		if err != nil {
 			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
-				fmt.Println("connection closed")
+				fmt.Println("Connection from", conn.RemoteAddr(), "closed")
 				return
 			}
-			fmt.Println("error reading packet: ", err)
+			fmt.Println("Error reading packet: ", err)
 			return
 		}
 
 		conn.handlePacket(packet, conn)
 	}
+}
+
+func (conn *Connection) LocalAddr() net.Addr {
+	return conn.connection.LocalAddr()
 }
 
 func (conn *Connection) RemoteAddr() net.Addr {

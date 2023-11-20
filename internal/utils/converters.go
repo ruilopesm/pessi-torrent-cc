@@ -2,6 +2,7 @@ package utils
 
 import (
 	"net"
+	"strconv"
 )
 
 func TCPAddrToBytes(addr net.Addr) [4]byte {
@@ -18,4 +19,14 @@ func UDPAddrToBytes(addr net.Addr) [4]byte {
 	copy(result[:], ip)
 
 	return result
+}
+
+func StrToUDPPort(port string) (uint16, error) {
+	udpPort, err := strconv.ParseUint(port, 10, 16)
+	if err != nil {
+		var zero uint16
+		return zero, err
+	}
+
+	return uint16(udpPort), nil
 }

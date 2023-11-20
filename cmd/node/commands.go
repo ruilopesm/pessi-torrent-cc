@@ -2,15 +2,17 @@ package main
 
 import (
 	"PessiTorrent/internal/protocol"
+	"PessiTorrent/internal/utils"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
-// request <file>
+// request <file name>
 func (n *Node) requestFile(args []string) error {
 	filename := args[0]
 
-	packet := protocol.NewRequestFIlePacket(filename)
+	packet := protocol.NewRequestFilePacket(filename)
 	n.conn.EnqueuePacket(&packet)
 
 	return nil
@@ -18,56 +20,85 @@ func (n *Node) requestFile(args []string) error {
 
 // publish <path>
 func (n *Node) publish(args []string) error {
-	filePath := args[0]
+	path := args[0]
 
-	file, err := os.Open(filePath)
-	if err != nil {
+	// Check if the path is a file or a directory
+	switch info, err := os.Stat(path); {
+	case err != nil:
 		return err
-	}
-
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return err
-	}
-
-	if fileInfo.IsDir() {
-		files, err := file.Readdir(-1)
+	case info.IsDir():
+		err = n.publishDirectory(path)
 		if err != nil {
 			return err
 		}
-
-		// Add trailing slash if absent
-		if filePath[len(filePath)-1] != '/' {
-			filePath = filePath + "/"
-		}
-
-		for _, f := range files {
-			err := n.publish([]string{filePath + f.Name()})
-			if err != nil {
-				return err
-			}
-		}
-
-	} else {
-		fmt.Println("Adding file to internal memory:", filePath)
-		f, err := n.AddFile(filePath)
+	default:
+		err = n.publishFile(path)
 		if err != nil {
 			return err
 		}
-
-		fmt.Println("Sending file to tracker:", filePath)
-
-		packet := protocol.NewPublishFilePacket(f.filename, f.fileHash, f.chunkHashes)
-		n.conn.EnqueuePacket(&packet)
 	}
 
 	return nil
 }
 
+func (n *Node) publishFile(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	filename := filepath.Base(path)
+
+	fileHash, err := utils.HashFile(file)
+	if err != nil {
+		return err
+	}
+
+	chunkHashes := make([][20]byte, 0)
+	err = utils.HashFileChunks(file, &chunkHashes)
+	if err != nil {
+		return err
+	}
+
+	var bitfield []uint16
+	for i := 0; i < len(chunkHashes); i++ {
+		bitfield = append(bitfield, uint16(i))
+	}
+
+	internal_file := NewFile(filename, fileHash, chunkHashes).WithFilePath(path).WithBitfield(protocol.EncodeBitField(bitfield))
+	n.AddFile(internal_file)
+	fmt.Printf("Added file %s to internal state\n", internal_file.filename)
+
+	packet := protocol.NewPublishFilePacket(internal_file.filename, internal_file.fileHash, internal_file.chunkHashes)
+	n.conn.EnqueuePacket(&packet)
+	fmt.Println("Sent publish file packet to tracker")
+
+	return nil
+}
+
+func (n *Node) publishDirectory(path string) error {
+	err := filepath.WalkDir(path, func(current_path string, d os.DirEntry, err error) error {
+		if path != current_path {
+			switch d.IsDir() {
+			case true:
+				return n.publishDirectory(current_path)
+			case false:
+				return n.publishFile(current_path)
+			}
+
+			return nil
+		}
+
+		return nil
+	})
+
+	return err
+}
+
 // status
 func (n *Node) status(_ []string) error {
 	n.files.ForEach(func(filename string, file *File) {
-		fmt.Println("----------------------------------------")
 		fmt.Printf("File: %v\n", file.filename)
 		fmt.Printf("Filepath: %v\n", file.filepath)
 		fmt.Printf("File hash: %v\n", file.fileHash)
@@ -78,6 +109,7 @@ func (n *Node) status(_ []string) error {
 	return nil
 }
 
+// remove <file name>
 func (n *Node) removeFile(args []string) error {
 	filename := args[0]
 

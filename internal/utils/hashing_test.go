@@ -57,13 +57,9 @@ func TestHashFileChunks(t *testing.T) {
 
 	var actualChunkHashes [][20]byte
 	// Call the HashFileChunks function with the temporary file
-	chunkSize, err := HashFileChunks(tempFile, &actualChunkHashes)
+	err = HashFileChunks(tempFile, &actualChunkHashes)
 	if err != nil {
 		t.Fatalf("Error hashing file chunks: %v", err)
-	}
-
-	if chunkSize != 16000 && len(actualChunkHashes) != 3 {
-		t.Fatalf("Expected chunk size to be 16000 bytes, but got %v bytes", chunkSize)
 	}
 }
 

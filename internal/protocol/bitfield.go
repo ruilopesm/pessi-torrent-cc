@@ -1,6 +1,5 @@
 package protocol
 
-// EncodeBitField encodes a bitfield into a byte array
 func EncodeBitField(bitfield []uint16) []byte {
 	lastElement := bitfield[len(bitfield)-1]
 	size := (int(lastElement) / 8) + 1
@@ -14,7 +13,6 @@ func EncodeBitField(bitfield []uint16) []byte {
 	return binaryBitfield
 }
 
-// DecodeBitField decodes a byte array into a bitfield
 func DecodeBitField(binaryBitfield []byte) []uint16 {
 	var bitfield []uint16
 	size := len(binaryBitfield)
@@ -28,7 +26,7 @@ func DecodeBitField(binaryBitfield []byte) []uint16 {
 	return bitfield
 }
 
-// SetBit sets the bit value at a given position in the bitfield to 1 (starting at 0)
+// Sets the bit value at a given position in the bitfield to 1 (starting at 0)
 func SetBit(bitfield []byte, position int) {
 	offset := position / 8
 	value := bitfield[offset]
@@ -39,7 +37,7 @@ func SetBit(bitfield []byte, position int) {
 	bitfield[offset] = value | uint8(mask)
 }
 
-// GetBit returns true if the bit value at a given position in the bitfield is set to 1 (starting at 0)
+// Returns true if the bit value at a given position in the bitfield is set to 1 (starting at 0)
 func GetBit(bitfield []byte, position int) bool {
 	offset := position / 8
 	value := bitfield[offset]

@@ -18,12 +18,6 @@ type Tracker struct {
 	quitch     chan struct{}
 }
 
-type File struct {
-	name     string
-	fileHash [20]byte
-	hashes   [][20]byte
-}
-
 type NodeInfo struct {
 	conn    connection.Connection
 	udpPort uint16
@@ -50,7 +44,7 @@ func (t *Tracker) Start() error {
 		return err
 	}
 	defer ln.Close()
-	fmt.Println("tracker listening tcp on", ln.Addr())
+	fmt.Println("Tracker listening tcp on", ln.Addr())
 
 	t.ln = ln
 
@@ -65,11 +59,11 @@ func (t *Tracker) acceptLoop() {
 	for {
 		c, err := t.ln.Accept()
 		if err != nil {
-			fmt.Println("accept error:", err)
+			fmt.Println("Accept error:", err)
 			continue
 		}
 		conn := connection.NewConnection(c, t.handlePacket)
-		fmt.Printf("node %s connected\n", conn.RemoteAddr())
+		fmt.Printf("Node %s connected\n", conn.RemoteAddr())
 
 		go conn.Start()
 	}
@@ -86,13 +80,13 @@ func (t *Tracker) handlePacket(packet interface{}, conn *connection.Connection) 
 	case *protocol.RemoveFilePacket:
 		t.handleRemoveFilePacket(packet.(*protocol.RemoveFilePacket), conn)
 	default:
-		fmt.Println("unknown packet type received: ", data)
+		fmt.Println("Unknown packet type received: ", data)
 	}
 }
 
 func main() {
 	if len(os.Args) != 2 {
-		fmt.Println("usage: tracker <listen port>")
+		fmt.Println("Usage: tracker <listen port>")
 		return
 	}
 

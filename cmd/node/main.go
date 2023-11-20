@@ -10,7 +10,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"strconv"
 )
 
 type Node struct {
@@ -23,10 +22,10 @@ type Node struct {
 }
 
 func NewNode(serverAddr string, listenUDPPort string) Node {
-	// FIXME: This should be on another module
-	udpPort, err := strconv.ParseUint(listenUDPPort, 10, 16)
+	udpPort, err := utils.StrToUDPPort(listenUDPPort)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error parsing udp port:", err)
+		os.Exit(1)
 	}
 
 	return Node{
@@ -38,7 +37,6 @@ func NewNode(serverAddr string, listenUDPPort string) Node {
 }
 
 func (n *Node) handlePacket(packet interface{}, conn *connection.Connection) {
-	// log.Println("packet ", packet, " received from ", conn.RemoteAddr())
 	switch data := packet.(type) {
 	case *protocol.PublishFilePacket:
 		n.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
@@ -47,7 +45,7 @@ func (n *Node) handlePacket(packet interface{}, conn *connection.Connection) {
 	case *protocol.AlreadyExistsPacket:
 		n.handleAlreadyExistsPacket(packet.(*protocol.AlreadyExistsPacket), conn)
 	default:
-		fmt.Println("unknown packet type received: ", data)
+		fmt.Println("Unknown packet type received:", data)
 	}
 }
 
@@ -70,7 +68,7 @@ func (n *Node) Start() error {
 	cli := cli.NewCLI(n.stop)
 	cli.AddCommand("request", "<file name>", 1, n.requestFile)
 	cli.AddCommand("publish", "<path>", 1, n.publish)
-	cli.AddCommand("status", "Check loaded files", 0, n.status)
+	cli.AddCommand("status", "", 0, n.status)
 	cli.AddCommand("remove", "<file name>", 1, n.removeFile)
 	go cli.Start()
 
