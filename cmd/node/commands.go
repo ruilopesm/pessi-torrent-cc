@@ -98,6 +98,9 @@ func (n *Node) publishDirectory(path string) error {
 
 // status
 func (n *Node) status(_ []string) error {
+	fmt.Printf("Currently connected to tracker with address %s\n", n.serverAddr)
+
+	fmt.Println("Published files:")
 	n.files.ForEach(func(filename string, file *File) {
 		fmt.Printf("File: %v\n", file.filename)
 		fmt.Printf("Filepath: %v\n", file.filepath)

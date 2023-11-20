@@ -15,6 +15,7 @@ type CLI struct {
 type Command struct {
 	Name         string
 	Usage        string
+	Description  string
 	NumberOfArgs int
 	Execute      func(args []string) error
 }
@@ -26,10 +27,11 @@ func NewCLI(shutdownHook func()) CLI {
 	}
 }
 
-func (c *CLI) AddCommand(name string, usage string, numberOfArgs int, execute func(args []string) error) {
+func (c *CLI) AddCommand(name string, usage string, description string, numberOfArgs int, execute func(args []string) error) {
 	c.commands[name] = Command{
 		Name:         name,
 		Usage:        usage,
+		Description:  description,
 		NumberOfArgs: numberOfArgs,
 		Execute:      execute,
 	}
@@ -68,6 +70,8 @@ func (c *CLI) Start() {
 		} else if parts[0] == "exit" {
 			c.shutdownHook()
 			break
+		} else if parts[0] == "help" {
+			c.help()
 		} else {
 			fmt.Printf("Unknown command %s\n", parts[0])
 			c.help()
@@ -80,8 +84,13 @@ func (c *CLI) help() {
 	fmt.Println("Available commands:")
 
 	for _, cmd := range c.commands {
-		fmt.Printf("\t%s\t%s\n", cmd.Name, cmd.Usage)
+		if cmd.Usage != "" {
+			fmt.Printf("\t%s\t%s\t%s\n", cmd.Name, cmd.Usage, cmd.Description)
+		} else {
+			fmt.Printf("\t%s\t%s\n", cmd.Name, cmd.Description)
+		}
 	}
 
+	fmt.Println("\thelp\tShow this help")
 	fmt.Println("\texit\tExit the program")
 }

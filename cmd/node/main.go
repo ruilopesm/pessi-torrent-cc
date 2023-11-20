@@ -7,7 +7,6 @@ import (
 	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/utils"
 	"fmt"
-	"log"
 	"net"
 	"os"
 )
@@ -57,33 +56,38 @@ func (n *Node) Start() error {
 	defer conn.Close()
 
 	n.conn = connection.NewConnection(conn, n.handlePacket)
-	go n.conn.Start()
 	n.ipAddr = utils.TCPAddrToBytes(conn.LocalAddr())
+	go n.conn.Start()
 
 	// TODO: Listen on udp
 
+	// Notify tracker of the node's existence
 	packet := protocol.NewInitPacket(n.ipAddr, n.udpPort)
 	n.conn.EnqueuePacket(&packet)
 
-	cli := cli.NewCLI(n.stop)
-	cli.AddCommand("request", "<file name>", 1, n.requestFile)
-	cli.AddCommand("publish", "<path>", 1, n.publish)
-	cli.AddCommand("status", "", 0, n.status)
-	cli.AddCommand("remove", "<file name>", 1, n.removeFile)
-	go cli.Start()
+	go n.StartCLI()
 
 	<-n.quitch
 
 	return nil
 }
 
-func (n *Node) stop() {
+func (n *Node) StartCLI() {
+	c := cli.NewCLI(n.Stop)
+	c.AddCommand("publish", "<file name>", "", 1, n.publish)
+	c.AddCommand("request", "<file name>", "", 1, n.requestFile)
+	c.AddCommand("status", "", "Show the status of the node", 0, n.status)
+	c.AddCommand("remove", "<file name>", "", 1, n.removeFile)
+	c.Start()
+}
+
+func (n *Node) Stop() {
 	n.quitch <- struct{}{}
 }
 
 func main() {
 	if len(os.Args) != 3 {
-		log.Fatal("Usage: node <server address> <udp port>")
+		fmt.Println("Usage: node <server ip:port> <udp port>")
 		return
 	}
 
@@ -92,6 +96,6 @@ func main() {
 	node := NewNode(os.Args[1], os.Args[2])
 	err := node.Start()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error starting node:", err)
 	}
 }
