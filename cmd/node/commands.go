@@ -61,9 +61,9 @@ func (n *Node) publishFile(path string) error {
 		return err
 	}
 
-  bitfield := protocol.NewCheckedBitfield(len(chunkHashes))
+	bitfield := protocol.NewCheckedBitfield(len(chunkHashes))
 	internal_file := NewFile(filename, fileHash, chunkHashes).WithFilePath(path).WithBitfield(protocol.EncodeBitField(bitfield))
-	n.AddFile(internal_file)
+	n.pending.Put(filename, &internal_file)
 	fmt.Printf("Added file %s to internal state\n", internal_file.filename)
 
 	packet := protocol.NewPublishFilePacket(internal_file.filename, internal_file.fileHash, internal_file.chunkHashes)
@@ -96,14 +96,41 @@ func (n *Node) publishDirectory(path string) error {
 func (n *Node) status(_ []string) error {
 	fmt.Printf("Currently connected to tracker with address %s\n", n.serverAddr)
 
-	fmt.Println("Published files:")
-	n.files.ForEach(func(filename string, file *File) {
-		fmt.Printf("File: %v\n", file.filename)
-		fmt.Printf("Filepath: %v\n", file.filepath)
-		fmt.Printf("File hash: %v\n", file.fileHash)
-		fmt.Printf("Chunk hashes: %v\n", file.chunkHashes)
-		fmt.Printf("Bitfield: %b\n", file.bitfield)
-	})
+	fmt.Printf("\n")
+
+	if n.pending.Len() != 0 {
+		fmt.Println("Pending files:")
+		n.pending.ForEach(func(filename string, file *File) {
+			fmt.Printf("%s at %s\n", file.filename, file.filepath)
+			fmt.Printf("Hash: %v\n", file.fileHash)
+			fmt.Printf("Chunk hashes: %v\n", file.chunkHashes)
+			fmt.Printf("Bitfield: %b\n", file.bitfield)
+		})
+
+		fmt.Printf("\n")
+	}
+
+	if n.published.Len() != 0 {
+		fmt.Println("Published files:")
+		n.published.ForEach(func(filename string, file *File) {
+			fmt.Printf("%s at %s\n", file.filename, file.filepath)
+			fmt.Printf("Hash: %v\n", file.fileHash)
+			fmt.Printf("Chunk hashes: %v\n", file.chunkHashes)
+			fmt.Printf("Bitfield: %b\n", file.bitfield)
+		})
+
+		fmt.Printf("\n")
+	}
+
+	if n.forDownload.Len() != 0 {
+		fmt.Println("Files for download:")
+		n.forDownload.ForEach(func(filename string, file *File) {
+			fmt.Printf("%s at %s\n", file.filename, file.filepath)
+			fmt.Printf("Hash: %v\n", file.fileHash)
+			fmt.Printf("Chunk hashes: %v\n", file.chunkHashes)
+			fmt.Printf("Bitfield: %b\n", file.bitfield)
+		})
+	}
 
 	return nil
 }
@@ -112,10 +139,12 @@ func (n *Node) status(_ []string) error {
 func (n *Node) removeFile(args []string) error {
 	filename := args[0]
 
-	n.RemoveFile(filename)
+	n.published.Delete(filename)
 
 	packet := protocol.NewRemoveFilePacket(filename)
 	n.conn.EnqueuePacket(&packet)
+
+	fmt.Printf("Successfully removed file %s from the network", filename)
 
 	return nil
 }

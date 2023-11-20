@@ -27,12 +27,12 @@ func DecodeBitField(binaryBitfield []uint8) []uint16 {
 }
 
 func NewCheckedBitfield(size int) []uint16 {
-  chunksAvailable := make([]uint16, size)
-  for i := 0; i < size; i++ {
-    chunksAvailable[i] = uint16(i)
-  }
+	chunksAvailable := make([]uint16, size)
+	for i := 0; i < size; i++ {
+		chunksAvailable[i] = uint16(i)
+	}
 
-  return chunksAvailable
+	return chunksAvailable
 }
 
 // Sets the bit value at a given position in the bitfield to 1 (starting at 0)
