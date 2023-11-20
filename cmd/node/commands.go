@@ -125,10 +125,9 @@ func (n *Node) status(_ []string) error {
 	if n.forDownload.Len() != 0 {
 		fmt.Println("Files for download:")
 		n.forDownload.ForEach(func(filename string, file *File) {
-			fmt.Printf("%s at %s\n", file.filename, file.filepath)
+			fmt.Printf("%s", file.filename)
 			fmt.Printf("Hash: %v\n", file.fileHash)
 			fmt.Printf("Chunk hashes: %v\n", file.chunkHashes)
-			fmt.Printf("Bitfield: %b\n", file.bitfield)
 		})
 	}
 
