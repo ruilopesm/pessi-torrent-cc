@@ -3,7 +3,9 @@ package protocol
 const (
 	InitType = iota
 	PublishFileType
+	PublishFileSuccessType
 	AlreadyExistsType
+	NotFoundType
 	PublishChunkType
 	RequestFileType
 	AnswerNodesType
@@ -20,8 +22,12 @@ func PacketStructFromType(packetType uint8) Packet {
 		return &InitPacket{}
 	case PublishFileType:
 		return &PublishFilePacket{}
+	case PublishFileSuccessType:
+		return &PublishFileSuccessPacket{}
 	case AlreadyExistsType:
 		return &AlreadyExistsPacket{}
+	case NotFoundType:
+		return &NotFoundPacket{}
 	case PublishChunkType:
 		return &PublishChunkPacket{}
 	case RequestFileType:

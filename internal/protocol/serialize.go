@@ -68,6 +68,9 @@ func DeserializePacket(reader io.Reader) (Packet, error) {
 	}
 
 	packet := PacketStructFromType(structType)
+	if packet == nil {
+		return nil, fmt.Errorf("invalid packet type: %d", structType)
+	}
 
 	err = DeserializeToStruct(reader, packet)
 	if err != nil {

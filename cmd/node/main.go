@@ -39,10 +39,14 @@ func (n *Node) handlePacket(packet interface{}, conn *connection.Connection) {
 	switch data := packet.(type) {
 	case *protocol.PublishFilePacket:
 		n.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
+	case *protocol.PublishFileSuccessPacket:
+		n.handlePublishFileSuccessPacket(packet.(*protocol.PublishFileSuccessPacket), conn)
 	case *protocol.AnswerNodesPacket:
 		n.handleAnswerNodesPacket(packet.(*protocol.AnswerNodesPacket), conn)
 	case *protocol.AlreadyExistsPacket:
 		n.handleAlreadyExistsPacket(packet.(*protocol.AlreadyExistsPacket), conn)
+	case *protocol.NotFoundPacket:
+		n.handleNotFoundPacket(packet.(*protocol.NotFoundPacket), conn)
 	default:
 		fmt.Println("Unknown packet type received:", data)
 	}

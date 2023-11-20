@@ -24,6 +24,15 @@ func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *connection
 func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, conn *connection.Connection) {
 	fmt.Printf("Publish file packet received from %s\n", conn.RemoteAddr())
 
+	// If file already exists
+	if t.files.Contains(packet.FileName) {
+		fmt.Printf("File %s published from %s already exists\n", packet.FileName, conn.RemoteAddr())
+
+		aePacket := protocol.NewAlreadyExistsPacket(packet.FileName)
+		conn.EnqueuePacket(&aePacket)
+		return
+	}
+
 	// Add file to the tracker
 	file := NewFile(packet.FileName, packet.FileHash, packet.ChunkHashes)
 	t.AddFile(file)
@@ -38,6 +47,10 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 			node.files.Put(file.filename, f)
 		}
 	})
+
+	// Send response back to the node
+	pfsPacket := protocol.NewPublishFileSuccessPacket(packet.FileName)
+	conn.EnqueuePacket(&pfsPacket)
 }
 
 func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, conn *connection.Connection) {
@@ -58,7 +71,7 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 			}
 		})
 
-		// Send file/chunks hashes
+		// Send file hash and chunks hashes
 		file, _ := t.files.Get(packet.FileName)
 		pfPacket := protocol.NewPublishFilePacket(file.filename, file.fileHash, file.chunkHashes)
 		conn.EnqueuePacket(&pfPacket)
@@ -67,8 +80,10 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 		anPacket := protocol.NewAnswerNodesPacket(nNodes, ipAddrs, ports, bitfields)
 		conn.EnqueuePacket(&anPacket)
 	} else {
-		// TODO: send file not found packet
-		fmt.Printf("File %s not found\n", packet.FileName)
+		fmt.Printf("File %s requested from %s does not exist\n", packet.FileName, conn.RemoteAddr())
+
+		nfPacket := protocol.NewNotFoundPacket(packet.FileName)
+		conn.EnqueuePacket(&nfPacket)
 	}
 }
 
