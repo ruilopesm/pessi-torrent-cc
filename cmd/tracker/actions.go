@@ -31,14 +31,9 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 	// Add file to the node's list of files
 	t.nodes.ForEach(func(node *NodeInfo) {
 		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-			chunksAvailable := make([]uint16, len(file.chunkHashes))
-			for i := 0; i < len(file.chunkHashes); i++ {
-				chunksAvailable[i] = uint16(i)
-			}
-
 			f := NodeFile{
 				file:            &file,
-				chunksAvailable: chunksAvailable,
+				chunksAvailable: protocol.NewCheckedBitfield(len(file.chunkHashes)),
 			}
 			node.files.Put(file.filename, f)
 		}

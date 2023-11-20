@@ -1,10 +1,10 @@
 package protocol
 
-func EncodeBitField(bitfield []uint16) []byte {
+func EncodeBitField(bitfield []uint16) []uint8 {
 	lastElement := bitfield[len(bitfield)-1]
 	size := (int(lastElement) / 8) + 1
 
-	binaryBitfield := make([]byte, size)
+	binaryBitfield := make([]uint8, size)
 
 	for value := range bitfield {
 		SetBit(binaryBitfield, int(bitfield[value]))
@@ -13,7 +13,7 @@ func EncodeBitField(bitfield []uint16) []byte {
 	return binaryBitfield
 }
 
-func DecodeBitField(binaryBitfield []byte) []uint16 {
+func DecodeBitField(binaryBitfield []uint8) []uint16 {
 	var bitfield []uint16
 	size := len(binaryBitfield)
 
@@ -26,8 +26,17 @@ func DecodeBitField(binaryBitfield []byte) []uint16 {
 	return bitfield
 }
 
+func NewCheckedBitfield(size int) []uint16 {
+  chunksAvailable := make([]uint16, size)
+  for i := 0; i < size; i++ {
+    chunksAvailable[i] = uint16(i)
+  }
+
+  return chunksAvailable
+}
+
 // Sets the bit value at a given position in the bitfield to 1 (starting at 0)
-func SetBit(bitfield []byte, position int) {
+func SetBit(bitfield []uint8, position int) {
 	offset := position / 8
 	value := bitfield[offset]
 	index := position - (8 * offset)
@@ -38,7 +47,7 @@ func SetBit(bitfield []byte, position int) {
 }
 
 // Returns true if the bit value at a given position in the bitfield is set to 1 (starting at 0)
-func GetBit(bitfield []byte, position int) bool {
+func GetBit(bitfield []uint8, position int) bool {
 	offset := position / 8
 	value := bitfield[offset]
 	index := position - (8 * offset)

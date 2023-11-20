@@ -61,11 +61,7 @@ func (n *Node) publishFile(path string) error {
 		return err
 	}
 
-	var bitfield []uint16
-	for i := 0; i < len(chunkHashes); i++ {
-		bitfield = append(bitfield, uint16(i))
-	}
-
+  bitfield := protocol.NewCheckedBitfield(len(chunkHashes))
 	internal_file := NewFile(filename, fileHash, chunkHashes).WithFilePath(path).WithBitfield(protocol.EncodeBitField(bitfield))
 	n.AddFile(internal_file)
 	fmt.Printf("Added file %s to internal state\n", internal_file.filename)

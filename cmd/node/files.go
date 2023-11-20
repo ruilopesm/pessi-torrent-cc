@@ -5,7 +5,7 @@ type File struct {
 	filepath    string // Optional
 	fileHash    [20]byte
 	chunkHashes [][20]byte
-	bitfield    []byte // Optional
+	bitfield    []uint8 // Optional
 }
 
 func NewFile(filename string, fileHash [20]byte, chunkHashes [][20]byte) File {

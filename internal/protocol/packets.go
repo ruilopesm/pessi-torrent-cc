@@ -43,7 +43,7 @@ func (pf *PublishFilePacket) GetPacketType() uint8 {
 type PublishChunkPacket struct {
 	BitfieldSize uint16
 	FileHash     [20]byte
-	Bitfield     []byte
+	Bitfield     []uint8
 }
 
 func NewPublishChunkPacket(fileHash [20]byte, bitfield []uint16) PublishChunkPacket {
@@ -104,7 +104,7 @@ type NodeFileInfo struct {
 	BitfieldSize uint16
 	Port         uint16
 	IPAddr       [4]byte
-	Bitfield     []byte
+	Bitfield     []uint8
 }
 
 func NewAnswerNodesPacket(nNodes uint16, ipAddrs [][4]byte, ports []uint16, bitfields [][]uint16) AnswerNodesPacket {
