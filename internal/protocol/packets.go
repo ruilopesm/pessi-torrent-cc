@@ -19,7 +19,6 @@ func (ip *InitPacket) GetPacketType() uint8 {
 }
 
 type PublishFilePacket struct {
-	NameSize       uint8
 	NumberOfChunks uint16
 	FileHash       [20]byte
 	FileName       string
@@ -28,7 +27,6 @@ type PublishFilePacket struct {
 
 func NewPublishFilePacket(fileName string, fileHash [20]byte, chunkHashes [][20]byte) PublishFilePacket {
 	return PublishFilePacket{
-		NameSize:       uint8(len(fileName)),
 		NumberOfChunks: uint16(len(chunkHashes)),
 		FileHash:       fileHash,
 		FileName:       fileName,
@@ -61,14 +59,26 @@ func (pc *PublishChunkPacket) GetPacketType() uint8 {
 	return PublishChunkType
 }
 
+type PublishFileSuccessPacket struct {
+	FileName string
+}
+
+func NewPublishFileSuccessPacket(fileName string) PublishFileSuccessPacket {
+	return PublishFileSuccessPacket{
+		FileName: fileName,
+	}
+}
+
+func (pfs *PublishFileSuccessPacket) GetPacketType() uint8 {
+	return PublishFileSuccessType
+}
+
 type RequestFilePacket struct {
-	NameSize uint8
 	FileName string
 }
 
 func NewRequestFilePacket(fileName string) RequestFilePacket {
 	return RequestFilePacket{
-		NameSize: uint8(len(fileName)),
 		FileName: fileName,
 	}
 }
@@ -80,19 +90,31 @@ func (rf *RequestFilePacket) GetPacketType() uint8 {
 // TRACKER -> NODE
 
 type AlreadyExistsPacket struct {
-	NameSize uint8
 	Filename string
 }
 
 func NewAlreadyExistsPacket(filename string) AlreadyExistsPacket {
 	return AlreadyExistsPacket{
-		NameSize: uint8(len(filename)),
 		Filename: filename,
 	}
 }
 
 func (ae *AlreadyExistsPacket) GetPacketType() uint8 {
 	return AlreadyExistsType
+}
+
+type NotFoundPacket struct {
+	Filename string
+}
+
+func NewNotFoundPacket(filename string) NotFoundPacket {
+	return NotFoundPacket{
+		Filename: filename,
+	}
+}
+
+func (nf *NotFoundPacket) GetPacketType() uint8 {
+	return NotFoundType
 }
 
 type AnswerNodesPacket struct {
@@ -132,13 +154,11 @@ func (an *AnswerNodesPacket) GetPacketType() uint8 {
 }
 
 type RemoveFilePacket struct {
-	NameSize uint8
 	FileName string
 }
 
 func NewRemoveFilePacket(fileName string) RemoveFilePacket {
 	return RemoveFilePacket{
-		NameSize: uint8(len(fileName)),
 		FileName: fileName,
 	}
 }

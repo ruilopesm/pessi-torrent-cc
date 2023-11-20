@@ -25,11 +25,3 @@ func (f File) WithBitfield(bitfield []byte) File {
 	f.bitfield = bitfield
 	return f
 }
-
-func (n *Node) AddFile(file File) {
-	n.files.Put(file.filename, &file)
-}
-
-func (n *Node) RemoveFile(filename string) {
-	n.files.Delete(filename)
-}

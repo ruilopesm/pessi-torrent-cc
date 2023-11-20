@@ -16,8 +16,12 @@ type Node struct {
 	serverAddr string
 	udpPort    uint16
 	conn       connection.Connection
-	files      structures.SynchronizedMap[*File]
-	quitch     chan struct{}
+
+	published   structures.SynchronizedMap[*File]
+	pending     structures.SynchronizedMap[*File]
+	forDownload structures.SynchronizedMap[*File]
+
+	quitch chan struct{}
 }
 
 func NewNode(serverAddr string, listenUDPPort string) Node {
@@ -28,10 +32,12 @@ func NewNode(serverAddr string, listenUDPPort string) Node {
 	}
 
 	return Node{
-		serverAddr: serverAddr,
-		udpPort:    uint16(udpPort),
-		files:      structures.NewSynchronizedMap[*File](),
-		quitch:     make(chan struct{}),
+		serverAddr:  serverAddr,
+		udpPort:     uint16(udpPort),
+		published:   structures.NewSynchronizedMap[*File](),
+		pending:     structures.NewSynchronizedMap[*File](),
+		forDownload: structures.NewSynchronizedMap[*File](),
+		quitch:      make(chan struct{}),
 	}
 }
 
@@ -39,10 +45,14 @@ func (n *Node) handlePacket(packet interface{}, conn *connection.Connection) {
 	switch data := packet.(type) {
 	case *protocol.PublishFilePacket:
 		n.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
+	case *protocol.PublishFileSuccessPacket:
+		n.handlePublishFileSuccessPacket(packet.(*protocol.PublishFileSuccessPacket), conn)
 	case *protocol.AnswerNodesPacket:
 		n.handleAnswerNodesPacket(packet.(*protocol.AnswerNodesPacket), conn)
 	case *protocol.AlreadyExistsPacket:
 		n.handleAlreadyExistsPacket(packet.(*protocol.AlreadyExistsPacket), conn)
+	case *protocol.NotFoundPacket:
+		n.handleNotFoundPacket(packet.(*protocol.NotFoundPacket), conn)
 	default:
 		fmt.Println("Unknown packet type received:", data)
 	}
