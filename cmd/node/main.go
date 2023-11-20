@@ -16,8 +16,12 @@ type Node struct {
 	serverAddr string
 	udpPort    uint16
 	conn       connection.Connection
-	files      structures.SynchronizedMap[*File]
-	quitch     chan struct{}
+
+	published   structures.SynchronizedMap[*File]
+	pending     structures.SynchronizedMap[*File]
+	forDownload structures.SynchronizedMap[*File]
+
+	quitch chan struct{}
 }
 
 func NewNode(serverAddr string, listenUDPPort string) Node {
@@ -28,10 +32,12 @@ func NewNode(serverAddr string, listenUDPPort string) Node {
 	}
 
 	return Node{
-		serverAddr: serverAddr,
-		udpPort:    uint16(udpPort),
-		files:      structures.NewSynchronizedMap[*File](),
-		quitch:     make(chan struct{}),
+		serverAddr:  serverAddr,
+		udpPort:     uint16(udpPort),
+		published:   structures.NewSynchronizedMap[*File](),
+		pending:     structures.NewSynchronizedMap[*File](),
+		forDownload: structures.NewSynchronizedMap[*File](),
+		quitch:      make(chan struct{}),
 	}
 }
 
