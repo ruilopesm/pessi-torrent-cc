@@ -1,14 +1,14 @@
 package main
 
 import (
-	"PessiTorrent/internal/connection"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
+	"PessiTorrent/internal/transport"
 	"PessiTorrent/internal/utils"
 	"fmt"
 )
 
-func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *connection.Connection) {
+func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *transport.TCPConnection) {
 	fmt.Printf("Init packet received from %s\n", conn.RemoteAddr())
 
 	info := NodeInfo{
@@ -21,7 +21,7 @@ func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *connection
 	fmt.Printf("Registered node with data: %v, %v\n", packet.IPAddr, packet.UDPPort)
 }
 
-func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, conn *connection.Connection) {
+func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, conn *transport.TCPConnection) {
 	fmt.Printf("Publish file packet received from %s\n", conn.RemoteAddr())
 
 	// If file already exists
@@ -53,7 +53,7 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 	conn.EnqueuePacket(&pfsPacket)
 }
 
-func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, conn *connection.Connection) {
+func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, conn *transport.TCPConnection) {
 	fmt.Printf("Request file packet received from %s\n", conn.RemoteAddr())
 
 	if t.files.Contains(packet.FileName) {
@@ -87,7 +87,7 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 	}
 }
 
-func (t *Tracker) handleRemoveFilePacket(packet *protocol.RemoveFilePacket, conn *connection.Connection) {
+func (t *Tracker) handleRemoveFilePacket(packet *protocol.RemoveFilePacket, conn *transport.TCPConnection) {
 	fmt.Printf("Remove file packet received from %s\n", conn.RemoteAddr())
 
 	t.nodes.ForEach(func(node *NodeInfo) {

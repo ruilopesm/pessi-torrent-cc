@@ -2,9 +2,9 @@ package main
 
 import (
 	"PessiTorrent/internal/cli"
-	"PessiTorrent/internal/connection"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
+	"PessiTorrent/internal/transport"
 	"PessiTorrent/internal/utils"
 	"fmt"
 	"net"
@@ -15,7 +15,9 @@ type Node struct {
 	ipAddr     [4]byte
 	serverAddr string
 	udpPort    uint16
-	conn       connection.Connection
+
+	conn transport.TCPConnection
+	srv  transport.UDPServer
 
 	published   structures.SynchronizedMap[*File]
 	pending     structures.SynchronizedMap[*File]
@@ -32,16 +34,18 @@ func NewNode(serverAddr string, listenUDPPort string) Node {
 	}
 
 	return Node{
-		serverAddr:  serverAddr,
-		udpPort:     uint16(udpPort),
+		serverAddr: serverAddr,
+		udpPort:    uint16(udpPort),
+
 		published:   structures.NewSynchronizedMap[*File](),
 		pending:     structures.NewSynchronizedMap[*File](),
 		forDownload: structures.NewSynchronizedMap[*File](),
-		quitch:      make(chan struct{}),
+
+		quitch: make(chan struct{}),
 	}
 }
 
-func (n *Node) handlePacket(packet interface{}, conn *connection.Connection) {
+func (n *Node) handleTCPPackets(packet interface{}, conn *transport.TCPConnection) {
 	switch data := packet.(type) {
 	case *protocol.PublishFilePacket:
 		n.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
@@ -58,18 +62,43 @@ func (n *Node) handlePacket(packet interface{}, conn *connection.Connection) {
 	}
 }
 
+func (n *Node) handleUDPPackets(packet interface{}, addr *net.UDPAddr) {
+	switch data := packet.(type) {
+	case *protocol.RequestChunksPacket:
+		n.handleRequestChunksPacket(packet.(*protocol.RequestChunksPacket), addr)
+	default:
+		fmt.Println("Unknown packet type received:", data)
+	}
+}
+
 func (n *Node) Start() error {
+	// Dial tracker using tcp
 	conn, err := net.Dial("tcp4", n.serverAddr)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 
-	n.conn = connection.NewConnection(conn, n.handlePacket)
+	n.conn = transport.NewTCPConnection(conn, n.handleTCPPackets)
 	n.ipAddr = utils.TCPAddrToBytes(conn.LocalAddr())
 	go n.conn.Start()
 
-	// TODO: Listen on udp
+	// Listen on udp
+	udpAddr := net.UDPAddr{
+		IP:   net.IPv4zero,
+		Port: int(n.udpPort),
+	}
+
+	udpConn, err := net.ListenUDP("udp4", &udpAddr)
+	if err != nil {
+		return err
+	}
+	defer udpConn.Close()
+
+	n.srv = transport.NewUDPServer(*udpConn, n.handleUDPPackets)
+	go n.srv.Start()
+
+	fmt.Println("Node listening udp on", udpConn.LocalAddr())
 
 	// Notify tracker of the node's existence
 	packet := protocol.NewInitPacket(n.ipAddr, n.udpPort)

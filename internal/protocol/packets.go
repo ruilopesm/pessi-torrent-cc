@@ -166,3 +166,19 @@ func NewRemoveFilePacket(fileName string) RemoveFilePacket {
 func (rf *RemoveFilePacket) GetPacketType() uint8 {
 	return RemoveFileType
 }
+
+// NODE -> NODE
+
+type RequestChunksPacket struct {
+	FileName string
+}
+
+func NewRequestChunksPacket(fileName string) RequestChunksPacket {
+	return RequestChunksPacket{
+		FileName: fileName,
+	}
+}
+
+func (rc *RequestChunksPacket) GetPacketType() uint8 {
+	return RequestChunksType
+}

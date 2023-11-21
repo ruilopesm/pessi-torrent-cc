@@ -1,9 +1,9 @@
 package main
 
 import (
-	"PessiTorrent/internal/connection"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
+	"PessiTorrent/internal/transport"
 	"fmt"
 	"log"
 	"net"
@@ -19,7 +19,7 @@ type Tracker struct {
 }
 
 type NodeInfo struct {
-	conn    connection.Connection
+	conn    transport.TCPConnection
 	udpPort uint16
 	files   structures.SynchronizedMap[NodeFile]
 }
@@ -31,7 +31,7 @@ type NodeFile struct {
 
 func NewTracker(listenPort string) Tracker {
 	return Tracker{
-		listenAddr: "0.0.0.0:" + listenPort,
+		listenAddr: net.IPv4zero.String() + ":" + listenPort,
 		files:      structures.NewSynchronizedMap[*File](),
 		nodes:      structures.NewSynchronizedList[*NodeInfo](16),
 		quitch:     make(chan struct{}),
@@ -62,14 +62,14 @@ func (t *Tracker) acceptLoop() {
 			fmt.Println("Accept error:", err)
 			continue
 		}
-		conn := connection.NewConnection(c, t.handlePacket)
+		conn := transport.NewTCPConnection(c, t.handlePacket)
 		fmt.Printf("Node %s connected\n", conn.RemoteAddr())
 
 		go conn.Start()
 	}
 }
 
-func (t *Tracker) handlePacket(packet interface{}, conn *connection.Connection) {
+func (t *Tracker) handlePacket(packet interface{}, conn *transport.TCPConnection) {
 	switch data := packet.(type) {
 	case *protocol.InitPacket:
 		t.handleInitPacket(packet.(*protocol.InitPacket), conn)
