@@ -47,8 +47,6 @@ func NewNode(serverAddr string, listenUDPPort string) Node {
 
 func (n *Node) handleTCPPackets(packet interface{}, conn *transport.TCPConnection) {
 	switch data := packet.(type) {
-	case *protocol.PublishFilePacket:
-		n.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
 	case *protocol.PublishFileSuccessPacket:
 		n.handlePublishFileSuccessPacket(packet.(*protocol.PublishFileSuccessPacket), conn)
 	case *protocol.AnswerNodesPacket:

@@ -7,13 +7,6 @@ import (
 	"net"
 )
 
-func (n *Node) handlePublishFilePacket(packet *protocol.PublishFilePacket, conn *transport.TCPConnection) {
-	fmt.Printf("Publish file with name %s packet received\n", packet.FileName)
-
-	file := NewFile(packet.FileName, packet.FileHash, packet.ChunkHashes)
-	n.forDownload.Put(packet.FileName, &file)
-}
-
 func (n *Node) handlePublishFileSuccessPacket(packet *protocol.PublishFileSuccessPacket, conn *transport.TCPConnection) {
 	fmt.Printf("File %s published in the network successfully\n", packet.FileName)
 
@@ -31,7 +24,7 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 	for _, node := range packet.Nodes {
 		fmt.Printf("Node %v:%d has the file chunks %b\n", node.IPAddr, node.Port, node.Bitfield)
 
-		packet := protocol.NewRequestChunksPacket("filename.txt", []uint16{0, 1, 2, 3, 4, 5, 6, 7})
+		packet := protocol.NewRequestChunksPacket(packet.Filename, []uint16{0, 1, 2, 3, 4, 5, 6, 7, 8})
 		udpAddr := net.UDPAddr{
 			IP:   node.IPAddr[:],
 			Port: int(node.Port),
@@ -53,6 +46,14 @@ func (n *Node) handleNotFoundPacket(packet *protocol.NotFoundPacket, conn *trans
 
 func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, addr *net.UDPAddr) {
 	fmt.Printf("Request chunks packet received from %s\n", addr)
-	fmt.Printf("Requested file name: %s\n", packet.FileName)
-	fmt.Printf("Requested chunks: %b\n", packet.Chunks)
+
+	// Get file from published files
+	file, ok := n.published.Get(packet.FileName)
+	if !ok {
+		fmt.Printf("File %s not found in published files\n", packet.FileName)
+		return
+	}
+
+	fmt.Printf("File %s is at path %s\n", packet.FileName, file.filepath)
+	fmt.Printf("Requested chunks: %v\n", packet.Chunks)
 }

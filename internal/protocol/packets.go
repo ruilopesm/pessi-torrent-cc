@@ -118,6 +118,8 @@ func (nf *NotFoundPacket) GetPacketType() uint8 {
 }
 
 type AnswerNodesPacket struct {
+	Filename      string
+	FileHash      [20]byte
 	NumberOfNodes uint16
 	Nodes         []NodeFileInfo
 }
@@ -129,8 +131,10 @@ type NodeFileInfo struct {
 	Bitfield     []uint8
 }
 
-func NewAnswerNodesPacket(nNodes uint16, ipAddrs [][4]byte, ports []uint16, bitfields [][]uint16) AnswerNodesPacket {
+func NewAnswerNodesPacket(filename string, fileHash [20]byte, nNodes uint16, ipAddrs [][4]byte, ports []uint16, bitfields [][]uint16) AnswerNodesPacket {
 	an := AnswerNodesPacket{
+		Filename:      filename,
+		FileHash:      fileHash,
 		NumberOfNodes: nNodes,
 	}
 

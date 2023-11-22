@@ -71,13 +71,10 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 			}
 		})
 
-		// Send file hash and chunks hashes
 		file, _ := t.files.Get(packet.FileName)
-		pfPacket := protocol.NewPublishFilePacket(file.filename, file.fileHash, file.chunkHashes)
-		conn.EnqueuePacket(&pfPacket)
 
-		// Send nodes info
-		anPacket := protocol.NewAnswerNodesPacket(nNodes, ipAddrs, ports, bitfields)
+		// Send file name, hash and chunks hashes
+		anPacket := protocol.NewAnswerNodesPacket(file.filename, file.fileHash, nNodes, ipAddrs, ports, bitfields)
 		conn.EnqueuePacket(&anPacket)
 	} else {
 		fmt.Printf("File %s requested from %s does not exist\n", packet.FileName, conn.RemoteAddr())
