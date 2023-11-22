@@ -171,11 +171,13 @@ func (rf *RemoveFilePacket) GetPacketType() uint8 {
 
 type RequestChunksPacket struct {
 	FileName string
+	Chunks   []uint16
 }
 
-func NewRequestChunksPacket(fileName string) RequestChunksPacket {
+func NewRequestChunksPacket(fileName string, chunks []uint16) RequestChunksPacket {
 	return RequestChunksPacket{
 		FileName: fileName,
+		Chunks:   chunks,
 	}
 }
 

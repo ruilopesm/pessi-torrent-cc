@@ -108,6 +108,7 @@ func deserializeReflectionValue(reader io.Reader, field reflect.Value) error {
 	if err != nil {
 		return fmt.Errorf("error deserializing field %v: %w", field.Interface(), err)
 	}
+
 	return nil
 }
 
