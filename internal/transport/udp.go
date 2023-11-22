@@ -3,9 +3,7 @@ package transport
 import (
 	"PessiTorrent/internal/protocol"
 	"bytes"
-	"errors"
 	"fmt"
-	"io"
 	"net"
 )
 
@@ -13,15 +11,15 @@ type UDPPacketHandler func(packet interface{}, addr *net.UDPAddr)
 
 type UDPServer struct {
 	connection   net.UDPConn
-	writeBuffer  bytes.Buffer
 	readBuffer   bytes.Buffer
+	writeBuffer  bytes.Buffer
 	handlePacket UDPPacketHandler
 }
 
 func NewUDPServer(conn net.UDPConn, handlePacket UDPPacketHandler) UDPServer {
 	return UDPServer{
 		conn,
-		*bytes.NewBuffer(make([]byte, 0)),
+		*bytes.NewBuffer(make([]byte, 2048)),
 		*bytes.NewBuffer(make([]byte, 0)),
 		handlePacket,
 	}
@@ -40,23 +38,21 @@ func (srv *UDPServer) Stop() {
 
 func (srv *UDPServer) readLoop() {
 	for {
-		n, addr, err := srv.connection.ReadFromUDP(srv.readBuffer.Bytes())
+		_, addr, err := srv.connection.ReadFromUDP(srv.readBuffer.Bytes())
 		if err != nil {
 			fmt.Println("Error reading from UDP connection:", err)
-			return
+			continue
 		}
 
 		packet, err := protocol.DeserializePacket(&srv.readBuffer)
 		if err != nil {
-			if !errors.Is(err, io.EOF) && !errors.Is(err, net.ErrClosed) {
-				fmt.Println("Error deserializing packet:", err)
-				return
-			}
+			fmt.Println("Error deserializing packet:", err)
+			continue
 		}
 
-		srv.handlePacket(packet, addr)
+		srv.readBuffer.Reset()
 
-		srv.readBuffer.Truncate(n)
+		srv.handlePacket(packet, addr)
 	}
 }
 

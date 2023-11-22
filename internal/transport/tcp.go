@@ -68,8 +68,9 @@ func (conn *TCPConnection) readLoop() {
 				fmt.Println("Connection from", conn.RemoteAddr(), "closed")
 				return
 			}
+
 			fmt.Println("Error reading packet:", err)
-			return
+			continue
 		}
 
 		conn.handlePacket(packet, conn)
