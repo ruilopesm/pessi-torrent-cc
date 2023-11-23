@@ -69,11 +69,11 @@ func (conn *TCPConnection) readLoop() {
 				return
 			}
 
-			fmt.Println("Error reading packet:", err)
+			fmt.Println("Error deserializing packet:", err)
 			continue
 		}
 
-		conn.handlePacket(packet, conn)
+		go conn.handlePacket(packet, conn)
 	}
 }
 

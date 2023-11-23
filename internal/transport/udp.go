@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	UDPMaxPacketSize = 65535
+	UDPMaxPacketSize = 65515 // 65535 - 20 (UDP header)
 )
 
 type UDPPacketHandler func(packet interface{}, addr *net.UDPAddr)
@@ -16,7 +16,6 @@ type UDPPacketHandler func(packet interface{}, addr *net.UDPAddr)
 type UDPServer struct {
 	connection   net.UDPConn
 	readBuffer   []byte
-	writeBuffer  bytes.Buffer
 	handlePacket UDPPacketHandler
 }
 
@@ -24,7 +23,6 @@ func NewUDPServer(conn net.UDPConn, handlePacket UDPPacketHandler) UDPServer {
 	return UDPServer{
 		conn,
 		make([]byte, UDPMaxPacketSize),
-		bytes.Buffer{},
 		handlePacket,
 	}
 }
@@ -54,26 +52,20 @@ func (srv *UDPServer) readLoop() {
 			continue
 		}
 
-		srv.handlePacket(packet, addr)
+		go srv.handlePacket(packet, addr)
 	}
 }
 
 func (srv *UDPServer) SendPacket(packet protocol.Packet, addr *net.UDPAddr) {
-	srv.writeBuffer.Reset()
-	err := protocol.SerializePacket(&srv.writeBuffer, packet)
+	buffer := new(bytes.Buffer)
+	err := protocol.SerializePacket(buffer, packet)
 	if err != nil {
 		fmt.Println("Error serializing packet:", err)
 		return
 	}
 
-	if srv.writeBuffer.Len() > UDPMaxPacketSize {
-		fmt.Println("Packet too large to send")
-		return
-	}
-
-	_, err = srv.connection.WriteToUDP(srv.writeBuffer.Bytes(), addr)
+	_, err = srv.connection.WriteToUDP(buffer.Bytes(), addr)
 	if err != nil {
-		fmt.Println("Error writing to UDP connection:", err)
-		return
+		fmt.Println("Error sending packet:", err)
 	}
 }

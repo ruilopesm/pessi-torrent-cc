@@ -58,12 +58,9 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 		return
 	}
 
-	fmt.Printf("File %s is at path %s\n", packet.FileName, file.filepath)
-	fmt.Printf("Requested chunks: %v\n", packet.Chunks)
-
 	// Send chunks to the node
 	for _, chunk := range packet.Chunks {
-		fmt.Printf("Sending chunk %d\n", chunk)
+		fmt.Printf("Sending chunk %d of file %s\n", chunk, packet.FileName)
 
 		// Open file by the given path
 		file, err := os.Open(file.filepath)

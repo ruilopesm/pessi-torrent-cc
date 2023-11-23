@@ -41,7 +41,7 @@ func (c *CLI) Start() {
 	c.help()
 
 	for {
-		fmt.Printf("> ")
+		// fmt.Printf("> ")
 
 		reader := bufio.NewReader(os.Stdin)
 		input, err := reader.ReadString('\n')
