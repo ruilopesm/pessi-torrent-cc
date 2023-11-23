@@ -37,8 +37,9 @@ func HashFileChunks(file *os.File, dest *[][20]byte) error {
 		return fmt.Errorf("error seeking file: %v", err)
 	}
 
-	chunkSize := ChunkSize(uint64(len(content)))
-	numChunks := uint64(math.Ceil(float64(len(content)) / float64(chunkSize)))
+	fileSize := uint64(len(content))
+	chunkSize := ChunkSize(fileSize)
+	numChunks := uint64(math.Ceil(float64(fileSize) / float64(chunkSize)))
 
 	chunkHashes := make([][20]byte, numChunks)
 	for i := uint64(0); i < numChunks; i++ {

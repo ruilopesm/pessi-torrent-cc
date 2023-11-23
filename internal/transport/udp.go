@@ -7,11 +7,15 @@ import (
 	"net"
 )
 
+const (
+	BufferSize = 1_000_000 // 1 MB
+)
+
 type UDPPacketHandler func(packet interface{}, addr *net.UDPAddr)
 
 type UDPServer struct {
 	connection   net.UDPConn
-	readBuffer   bytes.Buffer
+	readBuffer   []byte
 	writeBuffer  bytes.Buffer
 	handlePacket UDPPacketHandler
 }
@@ -19,8 +23,8 @@ type UDPServer struct {
 func NewUDPServer(conn net.UDPConn, handlePacket UDPPacketHandler) UDPServer {
 	return UDPServer{
 		conn,
-		*bytes.NewBuffer(make([]byte, 2048)),
-		*bytes.NewBuffer(make([]byte, 0)),
+		make([]byte, BufferSize),
+		bytes.Buffer{},
 		handlePacket,
 	}
 }
@@ -38,25 +42,24 @@ func (srv *UDPServer) Stop() {
 
 func (srv *UDPServer) readLoop() {
 	for {
-		_, addr, err := srv.connection.ReadFromUDP(srv.readBuffer.Bytes())
+		n, addr, err := srv.connection.ReadFromUDP(srv.readBuffer)
 		if err != nil {
 			fmt.Println("Error reading from UDP connection:", err)
 			continue
 		}
 
-		packet, err := protocol.DeserializePacket(&srv.readBuffer)
+		packet, err := protocol.DeserializePacket(bytes.NewReader(srv.readBuffer[:n]))
 		if err != nil {
 			fmt.Println("Error deserializing packet:", err)
 			continue
 		}
-
-		srv.readBuffer.Reset()
 
 		srv.handlePacket(packet, addr)
 	}
 }
 
 func (srv *UDPServer) SendPacket(packet protocol.Packet, addr *net.UDPAddr) {
+	srv.writeBuffer.Reset()
 	err := protocol.SerializePacket(&srv.writeBuffer, packet)
 	if err != nil {
 		fmt.Println("Error serializing packet:", err)
@@ -65,9 +68,7 @@ func (srv *UDPServer) SendPacket(packet protocol.Packet, addr *net.UDPAddr) {
 
 	_, err = srv.connection.WriteToUDP(srv.writeBuffer.Bytes(), addr)
 	if err != nil {
-		fmt.Println("Error sending packet:", err)
+		fmt.Println("Error writing to UDP connection:", err)
 		return
 	}
-
-	srv.writeBuffer.Reset()
 }

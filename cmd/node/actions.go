@@ -3,8 +3,12 @@ package main
 import (
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/transport"
+	"PessiTorrent/internal/utils"
+	"errors"
 	"fmt"
+	"io"
 	"net"
+	"os"
 )
 
 func (n *Node) handlePublishFileSuccessPacket(packet *protocol.PublishFileSuccessPacket, conn *transport.TCPConnection) {
@@ -24,7 +28,7 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 	for _, node := range packet.Nodes {
 		fmt.Printf("Node %v:%d has the file chunks %b\n", node.IPAddr, node.Port, node.Bitfield)
 
-		packet := protocol.NewRequestChunksPacket(packet.Filename, []uint16{0, 1, 2, 3, 4, 5, 6, 7, 8})
+		packet := protocol.NewRequestChunksPacket(packet.Filename, []uint16{1})
 		udpAddr := net.UDPAddr{
 			IP:   node.IPAddr[:],
 			Port: int(node.Port),
@@ -56,4 +60,51 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 
 	fmt.Printf("File %s is at path %s\n", packet.FileName, file.filepath)
 	fmt.Printf("Requested chunks: %v\n", packet.Chunks)
+
+	// Send chunks to the node
+	for _, chunk := range packet.Chunks {
+		fmt.Printf("Sending chunk %d\n", chunk)
+
+		// Open file by the given path
+		file, err := os.Open(file.filepath)
+		if err != nil {
+			fmt.Printf("Error opening file: %v\n", err)
+			return
+		}
+
+		// Calculate chunk size
+		stats, _ := file.Stat()
+		chunkSize := utils.ChunkSize(uint64(stats.Size()))
+
+		// Read chunk until chunk size or EOF
+		chunkContent := make([]byte, chunkSize)
+		read, err := file.Read(chunkContent)
+		if err != nil && !errors.Is(err, io.EOF) {
+			fmt.Printf("Error reading file: %v\n", err)
+			return
+		}
+
+		// Send chunk
+		packet := protocol.NewChunkPacket(packet.FileName, chunk, chunkContent[:read])
+		n.srv.SendPacket(&packet, addr)
+	}
+}
+
+func (n *Node) handleChunkPacket(packet *protocol.ChunkPacket, addr *net.UDPAddr) {
+	fmt.Printf("Chunk packet received from %s\n", addr)
+
+	// Write to file
+	file, err := os.OpenFile(fmt.Sprintf("downloads/%s", packet.FileName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Printf("Error opening file: %v\n", err)
+		return
+	}
+
+	_, err = file.Write(packet.ChunkContent)
+	if err != nil {
+		fmt.Printf("Error writing to file: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Chunk %d written to file %s\n", packet.Chunk, packet.FileName)
 }

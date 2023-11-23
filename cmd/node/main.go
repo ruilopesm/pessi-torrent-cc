@@ -64,6 +64,8 @@ func (n *Node) handleUDPPackets(packet interface{}, addr *net.UDPAddr) {
 	switch data := packet.(type) {
 	case *protocol.RequestChunksPacket:
 		n.handleRequestChunksPacket(packet.(*protocol.RequestChunksPacket), addr)
+	case *protocol.ChunkPacket:
+		n.handleChunkPacket(packet.(*protocol.ChunkPacket), addr)
 	default:
 		fmt.Println("Unknown packet type received:", data)
 	}

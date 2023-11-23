@@ -188,3 +188,21 @@ func NewRequestChunksPacket(fileName string, chunks []uint16) RequestChunksPacke
 func (rc *RequestChunksPacket) GetPacketType() uint8 {
 	return RequestChunksType
 }
+
+type ChunkPacket struct {
+	FileName     string
+	Chunk        uint16
+	ChunkContent []uint8
+}
+
+func NewChunkPacket(fileName string, chunk uint16, chunkContent []uint8) ChunkPacket {
+	return ChunkPacket{
+		FileName:     fileName,
+		Chunk:        chunk,
+		ChunkContent: chunkContent,
+	}
+}
+
+func (c *ChunkPacket) GetPacketType() uint8 {
+	return ChunkType
+}
