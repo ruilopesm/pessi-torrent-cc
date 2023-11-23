@@ -11,42 +11,35 @@ import (
 )
 
 type Tracker struct {
-	listenAddr string
-	ln         net.Listener
-	files      structures.SynchronizedMap[*File]
-	nodes      structures.SynchronizedList[*NodeInfo]
-	quitch     chan struct{}
-}
+	addr     string
+	listener net.Listener
 
-type NodeInfo struct {
-	conn    transport.TCPConnection
-	udpPort uint16
-	files   structures.SynchronizedMap[NodeFile]
-}
+	files structures.SynchronizedMap[*TrackedFile]
+	nodes structures.SynchronizedList[*NodeInfo]
 
-type NodeFile struct {
-	file            *File
-	chunksAvailable []uint16
+	quitch chan struct{}
 }
 
 func NewTracker(listenPort string) Tracker {
 	return Tracker{
-		listenAddr: net.IPv4zero.String() + ":" + listenPort,
-		files:      structures.NewSynchronizedMap[*File](),
-		nodes:      structures.NewSynchronizedList[*NodeInfo](16),
-		quitch:     make(chan struct{}),
+		addr: net.IPv4zero.String() + ":" + listenPort,
+
+		files: structures.NewSynchronizedMap[*TrackedFile](),
+		nodes: structures.NewSynchronizedList[*NodeInfo](32),
+
+		quitch: make(chan struct{}),
 	}
 }
 
 func (t *Tracker) Start() error {
-	ln, err := net.Listen("tcp4", t.listenAddr)
+	ln, err := net.Listen("tcp4", t.addr)
 	if err != nil {
 		return err
 	}
 	defer ln.Close()
 	fmt.Println("Tracker listening tcp on", ln.Addr())
 
-	t.ln = ln
+	t.listener = ln
 
 	go t.acceptLoop()
 
@@ -57,7 +50,7 @@ func (t *Tracker) Start() error {
 
 func (t *Tracker) acceptLoop() {
 	for {
-		c, err := t.ln.Accept()
+		c, err := t.listener.Accept()
 		if err != nil {
 			fmt.Println("Accept error:", err)
 			continue

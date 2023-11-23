@@ -2,7 +2,6 @@ package main
 
 import (
 	"PessiTorrent/internal/protocol"
-	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/transport"
 	"PessiTorrent/internal/utils"
 	"fmt"
@@ -11,12 +10,8 @@ import (
 func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *transport.TCPConnection) {
 	fmt.Printf("Init packet received from %s\n", conn.RemoteAddr())
 
-	info := NodeInfo{
-		conn:    *conn,
-		udpPort: packet.UDPPort,
-		files:   structures.NewSynchronizedMap[NodeFile](),
-	}
-	t.nodes.Add(&info)
+	newNode := NewNodeInfo(*conn, packet.UDPPort)
+	t.nodes.Add(&newNode)
 
 	fmt.Printf("Registered node with data: %v, %v\n", packet.IPAddr, packet.UDPPort)
 }
@@ -34,17 +29,14 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 	}
 
 	// Add file to the tracker
-	file := NewFile(packet.FileName, packet.FileHash, packet.ChunkHashes)
-	t.AddFile(file)
+	file := NewTrackedFile(packet.FileName, packet.FileHash, packet.ChunkHashes)
+	t.files.Put(packet.FileName, &file)
 
 	// Add file to the node's list of files
 	t.nodes.ForEach(func(node *NodeInfo) {
 		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-			f := NodeFile{
-				file:            &file,
-				chunksAvailable: protocol.NewCheckedBitfield(len(file.chunkHashes)),
-			}
-			node.files.Put(file.filename, f)
+			newSharedFile := NewSharedFile(packet.FileName, packet.FileHash, packet.ChunkHashes)
+			node.AddFile(newSharedFile)
 		}
 	})
 
@@ -67,14 +59,14 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 				nNodes++
 				ipAddrs = append(ipAddrs, utils.TCPAddrToBytes(node.conn.RemoteAddr()))
 				ports = append(ports, uint16(node.udpPort))
-				bitfields = append(bitfields, file.chunksAvailable)
+				bitfields = append(bitfields, file.Bitfield)
 			}
 		})
 
 		file, _ := t.files.Get(packet.FileName)
 
 		// Send file name, hash and chunks hashes
-		anPacket := protocol.NewAnswerNodesPacket(file.filename, file.fileHash, nNodes, ipAddrs, ports, bitfields)
+		anPacket := protocol.NewAnswerNodesPacket(file.FileName, file.FileHash, nNodes, ipAddrs, ports, bitfields)
 		conn.EnqueuePacket(&anPacket)
 	} else {
 		fmt.Printf("File %s requested from %s does not exist\n", packet.FileName, conn.RemoteAddr())

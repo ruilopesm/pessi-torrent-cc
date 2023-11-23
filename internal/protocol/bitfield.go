@@ -35,6 +35,10 @@ func NewCheckedBitfield(size int) []uint16 {
 	return chunksAvailable
 }
 
+func NewUncheckedBitfield(size int) []uint16 {
+	return make([]uint16, size)
+}
+
 // Sets the bit value at a given position in the bitfield to 1 (starting at 0)
 func SetBit(bitfield []uint8, position int) {
 	offset := position / 8

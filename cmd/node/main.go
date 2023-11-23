@@ -12,7 +12,6 @@ import (
 )
 
 type Node struct {
-	ipAddr     [4]byte
 	serverAddr string
 	udpPort    uint16
 
@@ -21,7 +20,7 @@ type Node struct {
 
 	published   structures.SynchronizedMap[*File]
 	pending     structures.SynchronizedMap[*File]
-	forDownload structures.SynchronizedMap[*File]
+	forDownload structures.SynchronizedMap[*ForDownloadFile]
 
 	quitch chan struct{}
 }
@@ -37,9 +36,9 @@ func NewNode(serverAddr string, listenUDPPort string) Node {
 		serverAddr: serverAddr,
 		udpPort:    uint16(udpPort),
 
-		published:   structures.NewSynchronizedMap[*File](),
 		pending:     structures.NewSynchronizedMap[*File](),
-		forDownload: structures.NewSynchronizedMap[*File](),
+		published:   structures.NewSynchronizedMap[*File](),
+		forDownload: structures.NewSynchronizedMap[*ForDownloadFile](),
 
 		quitch: make(chan struct{}),
 	}
@@ -80,7 +79,6 @@ func (n *Node) Start() error {
 	defer conn.Close()
 
 	n.conn = transport.NewTCPConnection(conn, n.handleTCPPackets)
-	n.ipAddr = utils.TCPAddrToBytes(conn.LocalAddr())
 	go n.conn.Start()
 
 	// Listen on udp
@@ -101,7 +99,8 @@ func (n *Node) Start() error {
 	fmt.Println("Node listening udp on", udpConn.LocalAddr())
 
 	// Notify tracker of the node's existence
-	packet := protocol.NewInitPacket(n.ipAddr, n.udpPort)
+	ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
+	packet := protocol.NewInitPacket(ipAddr, n.udpPort)
 	n.conn.EnqueuePacket(&packet)
 
 	go n.StartCLI()

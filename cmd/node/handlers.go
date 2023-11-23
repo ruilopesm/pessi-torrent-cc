@@ -63,7 +63,7 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 		fmt.Printf("Sending chunk %d of file %s\n", chunk, packet.FileName)
 
 		// Open file by the given path
-		file, err := os.Open(file.filepath)
+		file, err := os.Open(file.Path)
 		if err != nil {
 			fmt.Printf("Error opening file: %v\n", err)
 			return
