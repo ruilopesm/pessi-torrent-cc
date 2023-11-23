@@ -24,16 +24,16 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 	fmt.Printf("Answer nodes packet received from %s\n", conn.RemoteAddr())
 	fmt.Printf("Number of nodes who got requested file: %d\n", packet.NumberOfNodes)
 
-	// Dial, using udp, to each node and request the chunks
+	// Request chunks
 	for _, node := range packet.Nodes {
-		fmt.Printf("Node %v:%d has the file chunks %b\n", node.IPAddr, node.Port, node.Bitfield)
+		chunks := protocol.DecodeBitField(node.Bitfield)
+		packet := protocol.NewRequestChunksPacket(packet.Filename, chunks)
 
-		packet := protocol.NewRequestChunksPacket(packet.Filename, []uint16{1})
-		udpAddr := net.UDPAddr{
+		udpAddr := &net.UDPAddr{
 			IP:   node.IPAddr[:],
 			Port: int(node.Port),
 		}
-		n.srv.SendPacket(&packet, &udpAddr)
+		n.srv.SendPacket(&packet, udpAddr)
 	}
 }
 
@@ -72,11 +72,17 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 			return
 		}
 
-		// Calculate chunk size
 		stats, _ := file.Stat()
 		chunkSize := utils.ChunkSize(uint64(stats.Size()))
 
-		// Read chunk until chunk size or EOF
+		// Seek to the beginning of the chunk
+		_, err = file.Seek(int64(uint64(chunk)*chunkSize), 0)
+		if err != nil {
+			fmt.Printf("Error seeking file: %v\n", err)
+			return
+		}
+
+		// Read chunk
 		chunkContent := make([]byte, chunkSize)
 		read, err := file.Read(chunkContent)
 		if err != nil && !errors.Is(err, io.EOF) {
