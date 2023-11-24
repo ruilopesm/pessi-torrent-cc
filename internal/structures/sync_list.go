@@ -1,6 +1,9 @@
 package structures
 
-import "sync"
+import (
+	"errors"
+	"sync"
+)
 
 type SynchronizedList[V comparable] struct {
 	L []V
@@ -30,6 +33,31 @@ func (l *SynchronizedList[V]) Remove(val V) {
 			return
 		}
 	}
+}
+
+func (l *SynchronizedList[V]) Set(index uint, val V) error {
+	l.Lock()
+	defer l.Unlock()
+
+	if index >= uint(len(l.L)) {
+		return errors.New("index out of bounds")
+	}
+
+	l.L[index] = val
+
+	return nil
+}
+
+func (l *SynchronizedList[V]) Get(index uint) (V, error) {
+	l.Lock()
+	defer l.Unlock()
+
+	if index >= uint(len(l.L)) {
+		var zero V
+		return zero, errors.New("index out of bounds")
+	}
+
+	return l.L[index], nil
 }
 
 func (l *SynchronizedList[V]) Len() int {

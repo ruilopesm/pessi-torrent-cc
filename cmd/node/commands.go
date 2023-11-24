@@ -14,6 +14,10 @@ func (n *Node) requestFile(args []string) error {
 
 	packet := protocol.NewRequestFilePacket(filename)
 	n.conn.EnqueuePacket(&packet)
+
+	forDownloadFile := NewForDownloadFile(filename)
+	n.forDownload.Put(filename, &forDownloadFile)
+
 	return nil
 }
 
@@ -120,7 +124,7 @@ func (n *Node) status(_ []string) error {
 			fmt.Printf("%s\n", file.FileName)
 			fmt.Printf("Hash: %x\n", file.FileHash)
 			fmt.Printf("Chunks: %d\n", len(file.ChunkHashes))
-			fmt.Printf("Downloaded: %d\n", len(file.Downloaded))
+			fmt.Printf("Downloaded: %d\n", file.Downloaded.Len())
 		})
 	}
 

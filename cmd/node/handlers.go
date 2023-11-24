@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"time"
 )
 
 func (n *Node) handlePublishFileSuccessPacket(packet *protocol.PublishFileSuccessPacket, conn *transport.TCPConnection) {
@@ -24,16 +25,48 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 	fmt.Printf("Answer nodes packet received from %s\n", conn.RemoteAddr())
 	fmt.Printf("Number of nodes who got requested file: %d\n", packet.NumberOfNodes)
 
+	// Update file in forDownload
+	forDownloadFile, _ := n.forDownload.Get(packet.FileName)
+	forDownloadFile.SetData(packet.FileHash, packet.ChunkHashes)
+
 	// Request chunks
 	for _, node := range packet.Nodes {
 		chunks := protocol.DecodeBitField(node.Bitfield)
-		packet := protocol.NewRequestChunksPacket(packet.Filename, chunks)
-
 		udpAddr := &net.UDPAddr{
 			IP:   node.IPAddr[:],
 			Port: int(node.Port),
 		}
-		n.srv.SendPacket(&packet, udpAddr)
+		packet := protocol.NewRequestChunksPacket(packet.FileName, chunks)
+
+		go n.requestChunks(&packet, udpAddr)
+	}
+}
+
+func (n *Node) requestChunks(packet *protocol.RequestChunksPacket, addr *net.UDPAddr) {
+	// Send request chunks packet
+	n.srv.SendPacket(packet, addr)
+
+	// Check, every 0.1s, if the chunk has been downloaded until 1s has passed
+	// FIXME: Should be adjusted to the chunk size and number of requested chunks
+	timeout := time.After(10 * time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		file, _ := n.forDownload.Get(packet.FileName)
+
+		select {
+		case <-ticker.C:
+			// Check if all requested chunks have been downloaded
+			if file.AllChunksDownloaded(packet.Chunks) {
+				fmt.Printf("All chunks of file %s have been downloaded\n", packet.FileName)
+				return
+			}
+
+		case <-timeout:
+			fmt.Printf("Chunks were not received within timeout\n")
+			return
+		}
 	}
 }
 
@@ -46,6 +79,9 @@ func (n *Node) handleAlreadyExistsPacket(packet *protocol.AlreadyExistsPacket, c
 
 func (n *Node) handleNotFoundPacket(packet *protocol.NotFoundPacket, conn *transport.TCPConnection) {
 	fmt.Printf("File %s was not found in the network\n", packet.Filename)
+
+	// Remove file from downloading, since it does not exist
+	n.forDownload.Delete(packet.Filename)
 }
 
 func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, addr *net.UDPAddr) {
@@ -94,10 +130,15 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 }
 
 func (n *Node) handleChunkPacket(packet *protocol.ChunkPacket, addr *net.UDPAddr) {
-	fmt.Printf("Chunk packet received from %s\n", addr)
+	fmt.Printf("Chunk %d of file %s downloaded\n", packet.Chunk, packet.FileName)
+
+	// Set chunk as downloaded
+	forDownloadFile, _ := n.forDownload.Get(packet.FileName)
+	forDownloadFile.SetChunkDownloaded(packet.Chunk)
 
 	// Write to file
-	file, err := os.OpenFile(fmt.Sprintf("downloads/%s", packet.FileName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// FIXME: Folder should not be hardcoded and this is not thread-safe
+	file, err := os.OpenFile(fmt.Sprintf("downloads/%s", packet.FileName), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Printf("Error opening file: %v\n", err)
 		return

@@ -66,7 +66,7 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 		file, _ := t.files.Get(packet.FileName)
 
 		// Send file name, hash and chunks hashes
-		anPacket := protocol.NewAnswerNodesPacket(file.FileName, file.FileHash, nNodes, ipAddrs, ports, bitfields)
+		anPacket := protocol.NewAnswerNodesPacket(file.FileName, file.FileHash, file.ChunkHashes, nNodes, ipAddrs, ports, bitfields)
 		conn.EnqueuePacket(&anPacket)
 	} else {
 		fmt.Printf("File %s requested from %s does not exist\n", packet.FileName, conn.RemoteAddr())
