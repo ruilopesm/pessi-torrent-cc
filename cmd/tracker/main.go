@@ -89,13 +89,12 @@ func (t *Tracker) handlePacket(packet interface{}, conn *connection.Connection) 
 func main() {
 	// TODO: check if port is inside tcp range
 
-	configPath := "./config/config.yml"
-	config, err := config.NewConfig(configPath)
+	conf, err := config.NewConfig(config.ConfigPath)
 	if err != nil {
 		fmt.Println("Error reading config:", err)
 		return
 	}
-	udpPort := strconv.Itoa(config.Tracker.Port)
+	udpPort := strconv.Itoa(conf.Tracker.Port)
 
 	flag.StringVar(&udpPort, "p", udpPort, "The port to listen on")
 	flag.Parse()

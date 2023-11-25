@@ -27,6 +27,7 @@ out/
 .idea/
 
 # config file
+config/config.yml
 
 # Others
 temp/
