@@ -1,0 +1,10 @@
+dns:
+  host: "10.4.4.2"
+  port: 53
+
+tracker:
+  host: "127.0.0.1"
+  port: 42069
+
+node:
+  port: 8081

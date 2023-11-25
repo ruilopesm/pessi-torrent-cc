@@ -26,6 +26,8 @@ out/
 # IntelliJ IDEA
 .idea/
 
+# config file
+
 # Others
 temp/
 bin/golangci-lint
