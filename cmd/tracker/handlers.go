@@ -29,13 +29,13 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 	}
 
 	// Add file to the tracker
-	file := NewTrackedFile(packet.FileName, packet.FileHash, packet.ChunkHashes)
+	file := NewTrackedFile(packet.FileName, packet.FileSize, packet.FileHash, packet.ChunkHashes)
 	t.files.Put(packet.FileName, &file)
 
 	// Add file to the node's list of files
 	t.nodes.ForEach(func(node *NodeInfo) {
 		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-			newSharedFile := NewSharedFile(packet.FileName, packet.FileHash, packet.ChunkHashes)
+			newSharedFile := NewSharedFile(packet.FileName, packet.FileSize, packet.FileHash, packet.ChunkHashes)
 			node.AddFile(newSharedFile)
 		}
 	})
@@ -66,7 +66,7 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 		file, _ := t.files.Get(packet.FileName)
 
 		// Send file name, hash and chunks hashes
-		anPacket := protocol.NewAnswerNodesPacket(file.FileName, file.FileHash, file.ChunkHashes, nNodes, ipAddrs, ports, bitfields)
+		anPacket := protocol.NewAnswerNodesPacket(file.FileName, file.FileSize, file.FileHash, file.ChunkHashes, nNodes, ipAddrs, ports, bitfields)
 		conn.EnqueuePacket(&anPacket)
 	} else {
 		fmt.Printf("File %s requested from %s does not exist\n", packet.FileName, conn.RemoteAddr())
@@ -80,7 +80,7 @@ func (t *Tracker) handleRemoveFilePacket(packet *protocol.RemoveFilePacket, conn
 	fmt.Printf("Remove file packet received from %s\n", conn.RemoteAddr())
 
 	t.nodes.ForEach(func(node *NodeInfo) {
-		if node.conn.RemoteAddr() != conn.RemoteAddr() {
+		if node.conn.RemoteAddr() == conn.RemoteAddr() {
 			node.files.Delete(packet.FileName)
 		}
 	})

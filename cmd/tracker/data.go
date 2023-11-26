@@ -8,20 +8,18 @@ import (
 
 type TrackedFile struct {
 	FileName    string
+	FileSize    uint64
 	FileHash    [20]byte
 	ChunkHashes [][20]byte
 }
 
-func NewTrackedFile(fileName string, fileHash [20]byte, chunkHashes [][20]byte) TrackedFile {
+func NewTrackedFile(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte) TrackedFile {
 	return TrackedFile{
 		FileName:    fileName,
+		FileSize:    fileSize,
 		FileHash:    fileHash,
 		ChunkHashes: chunkHashes,
 	}
-}
-
-type Nodes struct {
-	*structures.SynchronizedList[*NodeInfo]
 }
 
 type NodeInfo struct {
@@ -33,6 +31,7 @@ type NodeInfo struct {
 
 type SharedFile struct {
 	FileName    string
+	FileSize    uint64
 	FileHash    [20]byte
 	ChunkHashes [][20]byte
 	Bitfield    []uint16
@@ -46,14 +45,13 @@ func NewNodeInfo(conn transport.TCPConnection, udpPort uint16) NodeInfo {
 	}
 }
 
-func NewSharedFile(fileName string, fileHash [20]byte, chunkHashes [][20]byte) SharedFile {
-	size := len(chunkHashes)
-
+func NewSharedFile(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte) SharedFile {
 	return SharedFile{
 		FileName:    fileName,
+		FileSize:    fileSize,
 		FileHash:    fileHash,
 		ChunkHashes: chunkHashes,
-		Bitfield:    protocol.NewCheckedBitfield(size),
+		Bitfield:    protocol.NewCheckedBitfield(len(chunkHashes)),
 	}
 }
 

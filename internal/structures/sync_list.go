@@ -10,8 +10,12 @@ type SynchronizedList[V comparable] struct {
 	sync.Mutex
 }
 
-func NewSynchronizedList[V comparable](initialSize uint) SynchronizedList[V] {
-	return SynchronizedList[V]{L: make([]V, 0, initialSize)}
+func NewSynchronizedList[V comparable]() SynchronizedList[V] {
+	return SynchronizedList[V]{L: make([]V, 0)}
+}
+
+func NewSynchronizedListWithInitialSize[V comparable](size uint) SynchronizedList[V] {
+	return SynchronizedList[V]{L: make([]V, size)}
 }
 
 func (l *SynchronizedList[V]) Add(val V) {
@@ -27,10 +31,8 @@ func (l *SynchronizedList[V]) Remove(val V) {
 
 	for i, v := range l.L {
 		if v == val {
-			l.L[i] = l.L[len(l.L)-1]
-			l.L = l.L[:len(l.L)-1]
-
-			return
+			l.L = append(l.L[:i], l.L[i+1:]...)
+			break
 		}
 	}
 }
@@ -87,4 +89,32 @@ func (l *SynchronizedList[V]) ForEach(f func(V)) {
 	for _, v := range l.L {
 		f(v)
 	}
+}
+
+func (l *SynchronizedList[V]) Filter(predicate func(V) bool) []V {
+	l.Lock()
+	defer l.Unlock()
+
+	var result []V
+	for _, v := range l.L {
+		if predicate(v) {
+			result = append(result, v)
+		}
+	}
+
+	return result
+}
+
+func (l *SynchronizedList[V]) IndexesWhere(predicate func(V) bool) []uint {
+	l.Lock()
+	defer l.Unlock()
+
+	var result []uint
+	for i, v := range l.L {
+		if predicate(v) {
+			result = append(result, uint(i))
+		}
+	}
+
+	return result
 }

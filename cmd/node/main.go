@@ -28,7 +28,7 @@ type Node struct {
 func NewNode(serverAddr string, listenUDPPort string) Node {
 	udpPort, err := utils.StrToUDPPort(listenUDPPort)
 	if err != nil {
-		fmt.Println("Error parsing udp port:", err)
+		fmt.Println("Error parsing UDP port:", err)
 		os.Exit(1)
 	}
 
@@ -63,15 +63,13 @@ func (n *Node) handleUDPPackets(packet interface{}, addr *net.UDPAddr) {
 	switch data := packet.(type) {
 	case *protocol.RequestChunksPacket:
 		n.handleRequestChunksPacket(packet.(*protocol.RequestChunksPacket), addr)
-	case *protocol.ChunkPacket:
-		n.handleChunkPacket(packet.(*protocol.ChunkPacket), addr)
 	default:
 		fmt.Println("Unknown packet type received:", data)
 	}
 }
 
 func (n *Node) Start() error {
-	// Dial tracker using tcp
+	// Dial tracker using TCP
 	conn, err := net.Dial("tcp4", n.serverAddr)
 	if err != nil {
 		return err
@@ -81,7 +79,7 @@ func (n *Node) Start() error {
 	n.conn = transport.NewTCPConnection(conn, n.handleTCPPackets)
 	go n.conn.Start()
 
-	// Listen on udp
+	// Listen on UDP
 	udpAddr := net.UDPAddr{
 		IP:   net.IPv4zero,
 		Port: int(n.udpPort),
@@ -96,7 +94,7 @@ func (n *Node) Start() error {
 	n.srv = transport.NewUDPServer(*udpConn, n.handleUDPPackets)
 	go n.srv.Start()
 
-	fmt.Println("Node listening udp on", udpConn.LocalAddr())
+	fmt.Println("Node listening UDP on", udpConn.LocalAddr())
 
 	// Notify tracker of the node's existence
 	ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
@@ -125,11 +123,11 @@ func (n *Node) Stop() {
 
 func main() {
 	if len(os.Args) != 3 {
-		fmt.Println("Usage: node <server ip:port> <udp port>")
+		fmt.Println("Usage: node <server ip:port> <UDP port>")
 		return
 	}
 
-	// TODO: check if port is inside udp range
+	// TODO: check if port is inside UDP range
 
 	node := NewNode(os.Args[1], os.Args[2])
 	err := node.Start()

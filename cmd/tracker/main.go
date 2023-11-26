@@ -25,7 +25,7 @@ func NewTracker(listenPort string) Tracker {
 		addr: net.IPv4zero.String() + ":" + listenPort,
 
 		files: structures.NewSynchronizedMap[*TrackedFile](),
-		nodes: structures.NewSynchronizedList[*NodeInfo](32),
+		nodes: structures.NewSynchronizedList[*NodeInfo](),
 
 		quitch: make(chan struct{}),
 	}
@@ -37,7 +37,7 @@ func (t *Tracker) Start() error {
 		return err
 	}
 	defer ln.Close()
-	fmt.Println("Tracker listening tcp on", ln.Addr())
+	fmt.Println("Tracker listening TCP on", ln.Addr())
 
 	t.listener = ln
 
@@ -83,7 +83,7 @@ func main() {
 		return
 	}
 
-	// TODO: check if port is inside tcp range
+	// TODO: check if port is inside TCP range
 
 	tracker := NewTracker(os.Args[1])
 	err := tracker.Start()

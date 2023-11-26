@@ -59,7 +59,7 @@ func (n *Node) publishFile(path string) error {
 	}
 
 	chunkHashes := make([][20]byte, 0)
-	err = utils.HashFileChunks(file, &chunkHashes)
+	fileSize, err := utils.HashFileChunks(file, &chunkHashes)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func (n *Node) publishFile(path string) error {
 	n.pending.Put(fileName, &newFile)
 	fmt.Printf("Added file %s to pending files\n", fileName)
 
-	packet := protocol.NewPublishFilePacket(fileName, fileHash, chunkHashes)
+	packet := protocol.NewPublishFilePacket(fileName, fileSize, fileHash, chunkHashes)
 	n.conn.EnqueuePacket(&packet)
 	fmt.Println("Sent publish file packet to tracker")
 
@@ -121,10 +121,8 @@ func (n *Node) status(_ []string) error {
 	if n.forDownload.Len() != 0 {
 		fmt.Println("Files for download:")
 		n.forDownload.ForEach(func(filename string, file *ForDownloadFile) {
-			fmt.Printf("%s\n", file.FileName)
-			fmt.Printf("Hash: %x\n", file.FileHash)
-			fmt.Printf("Chunks: %d\n", len(file.ChunkHashes))
-			fmt.Printf("Downloaded: %d\n", file.Downloaded.Len())
+			fmt.Printf("%s with size %d\n", file.FileName, file.FileSize)
+			fmt.Printf("Chunks %d/%d\n", file.DownloadedChunks.Len(), len(file.ChunkHashes))
 		})
 	}
 
