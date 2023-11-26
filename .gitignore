@@ -26,6 +26,11 @@ out/
 # IntelliJ IDEA
 .idea/
 
+# config file
+config.yml
+config.*.yml
+!config.*.sample.yml
+
 # Others
 temp/
 bin/golangci-lint
