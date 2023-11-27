@@ -34,25 +34,25 @@ func (n *Node) requestFileByChunks(packet *protocol.AnswerNodesPacket, forDownlo
 	responsesChannel := make(chan *protocol.ChunkPacket)
 	defer close(responsesChannel)
 
-	// Check for faulty chunks
-	faultyChunks := forDownloadFile.GetFaultyChunks()
-	if len(faultyChunks) == 0 {
+	// Check for missing chunks
+	missingChunks := forDownloadFile.GetMissingChunks()
+	if len(missingChunks) == 0 {
 		fmt.Printf("File %s downloaded successfully\n", packet.FileName)
 		n.forDownload.Delete(packet.FileName)
 		return
 	}
 
-	// Loop over nodes who have the file and request faulty chunks
+	// Loop over nodes who have the file and request missing chunks
 	for _, node := range packet.Nodes {
-		faultyChunksPerNode := make([]uint16, 0)
+		missingChunksInNode := make([]uint16, 0)
 
-		for _, chunk := range faultyChunks {
+		for _, chunk := range missingChunks {
 			if protocol.GetBit(node.Bitfield, int(chunk)) {
-				faultyChunksPerNode = append(faultyChunksPerNode, uint16(chunk))
+				missingChunksInNode = append(missingChunksInNode, uint16(chunk))
 			}
 		}
 
-		if len(faultyChunksPerNode) > 0 {
+		if len(missingChunksInNode) > 0 {
 			udpAddr := &net.UDPAddr{
 				IP:   node.IPAddr[:],
 				Port: int(node.Port),
@@ -60,7 +60,7 @@ func (n *Node) requestFileByChunks(packet *protocol.AnswerNodesPacket, forDownlo
 
 			fmt.Printf("Sending request chunks packet to %s\n", udpAddr)
 
-			go n.sendRequestChunksPacket(packet.FileName, faultyChunksPerNode, udpAddr, responsesChannel)
+			go n.sendRequestChunksPacket(packet.FileName, missingChunksInNode, udpAddr, responsesChannel)
 		}
 	}
 
@@ -76,7 +76,7 @@ func (n *Node) requestFileByChunks(packet *protocol.AnswerNodesPacket, forDownlo
 			fmt.Printf("Chunk %d of file %s downloaded\n", chunkPacket.Chunk, forDownloadFile.FileName)
 
 		case <-timeout:
-			// Retry to download faulty chunks, if any
+			// Retry to download missing chunks, if any
 			n.requestFileByChunks(packet, forDownloadFile)
 		}
 	}

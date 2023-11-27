@@ -50,7 +50,7 @@ func (f *ForDownloadFile) SetDownloadedChunk(chunk uint16) {
 }
 
 // Returns a list of the chunks that were not yet downloaded
-func (f *ForDownloadFile) GetFaultyChunks() []uint {
+func (f *ForDownloadFile) GetMissingChunks() []uint {
 	chunks := f.DownloadedChunks.IndexesWhere(func(val bool) bool {
 		return !val
 	})
