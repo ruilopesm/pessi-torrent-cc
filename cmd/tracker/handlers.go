@@ -1,27 +1,22 @@
 package main
 
 import (
-	"PessiTorrent/internal/connection"
 	"PessiTorrent/internal/protocol"
-	"PessiTorrent/internal/structures"
+	"PessiTorrent/internal/transport"
 	"PessiTorrent/internal/utils"
 	"fmt"
 )
 
-func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *connection.Connection) {
+func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *transport.TCPConnection) {
 	fmt.Printf("Init packet received from %s\n", conn.RemoteAddr())
 
-	info := NodeInfo{
-		conn:    *conn,
-		udpPort: packet.UDPPort,
-		files:   structures.NewSynchronizedMap[NodeFile](),
-	}
-	t.nodes.Add(&info)
+	newNode := NewNodeInfo(*conn, packet.UDPPort)
+	t.nodes.Add(&newNode)
 
 	fmt.Printf("Registered node with data: %v, %v\n", packet.IPAddr, packet.UDPPort)
 }
 
-func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, conn *connection.Connection) {
+func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, conn *transport.TCPConnection) {
 	fmt.Printf("Publish file packet received from %s\n", conn.RemoteAddr())
 
 	// If file already exists
@@ -34,17 +29,14 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 	}
 
 	// Add file to the tracker
-	file := NewFile(packet.FileName, packet.FileHash, packet.ChunkHashes)
-	t.AddFile(file)
+	file := NewTrackedFile(packet.FileName, packet.FileSize, packet.FileHash, packet.ChunkHashes)
+	t.files.Put(packet.FileName, &file)
 
 	// Add file to the node's list of files
 	t.nodes.ForEach(func(node *NodeInfo) {
 		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-			f := NodeFile{
-				file:            &file,
-				chunksAvailable: protocol.NewCheckedBitfield(len(file.chunkHashes)),
-			}
-			node.files.Put(file.filename, f)
+			newSharedFile := NewSharedFile(packet.FileName, packet.FileSize, packet.FileHash, packet.ChunkHashes)
+			node.AddFile(newSharedFile)
 		}
 	})
 
@@ -53,7 +45,7 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 	conn.EnqueuePacket(&pfsPacket)
 }
 
-func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, conn *connection.Connection) {
+func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, conn *transport.TCPConnection) {
 	fmt.Printf("Request file packet received from %s\n", conn.RemoteAddr())
 
 	if t.files.Contains(packet.FileName) {
@@ -67,17 +59,14 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 				nNodes++
 				ipAddrs = append(ipAddrs, utils.TCPAddrToBytes(node.conn.RemoteAddr()))
 				ports = append(ports, uint16(node.udpPort))
-				bitfields = append(bitfields, file.chunksAvailable)
+				bitfields = append(bitfields, file.Bitfield)
 			}
 		})
 
-		// Send file hash and chunks hashes
 		file, _ := t.files.Get(packet.FileName)
-		pfPacket := protocol.NewPublishFilePacket(file.filename, file.fileHash, file.chunkHashes)
-		conn.EnqueuePacket(&pfPacket)
 
-		// Send nodes info
-		anPacket := protocol.NewAnswerNodesPacket(nNodes, ipAddrs, ports, bitfields)
+		// Send file name, hash and chunks hashes
+		anPacket := protocol.NewAnswerNodesPacket(file.FileName, file.FileSize, file.FileHash, file.ChunkHashes, nNodes, ipAddrs, ports, bitfields)
 		conn.EnqueuePacket(&anPacket)
 	} else {
 		fmt.Printf("File %s requested from %s does not exist\n", packet.FileName, conn.RemoteAddr())
@@ -87,11 +76,11 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 	}
 }
 
-func (t *Tracker) handleRemoveFilePacket(packet *protocol.RemoveFilePacket, conn *connection.Connection) {
+func (t *Tracker) handleRemoveFilePacket(packet *protocol.RemoveFilePacket, conn *transport.TCPConnection) {
 	fmt.Printf("Remove file packet received from %s\n", conn.RemoteAddr())
 
 	t.nodes.ForEach(func(node *NodeInfo) {
-		if node.conn.RemoteAddr() != conn.RemoteAddr() {
+		if node.conn.RemoteAddr() == conn.RemoteAddr() {
 			node.files.Delete(packet.FileName)
 		}
 	})

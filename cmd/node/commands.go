@@ -15,6 +15,9 @@ func (n *Node) requestFile(args []string) error {
 	packet := protocol.NewRequestFilePacket(filename)
 	n.conn.EnqueuePacket(&packet)
 
+	forDownloadFile := NewForDownloadFile(filename)
+	n.forDownload.Put(filename, &forDownloadFile)
+
 	return nil
 }
 
@@ -48,7 +51,7 @@ func (n *Node) publishFile(path string) error {
 	}
 	defer file.Close()
 
-	filename := filepath.Base(path)
+	fileName := filepath.Base(path)
 
 	fileHash, err := utils.HashFile(file)
 	if err != nil {
@@ -56,17 +59,16 @@ func (n *Node) publishFile(path string) error {
 	}
 
 	chunkHashes := make([][20]byte, 0)
-	err = utils.HashFileChunks(file, &chunkHashes)
+	fileSize, err := utils.HashFileChunks(file, &chunkHashes)
 	if err != nil {
 		return err
 	}
 
-	bitfield := protocol.NewCheckedBitfield(len(chunkHashes))
-	internal_file := NewFile(filename, fileHash, chunkHashes).WithFilePath(path).WithBitfield(protocol.EncodeBitField(bitfield))
-	n.pending.Put(filename, &internal_file)
-	fmt.Printf("Added file %s to internal state\n", internal_file.filename)
+	newFile := NewFile(fileName, path)
+	n.pending.Put(fileName, &newFile)
+	fmt.Printf("Added file %s to pending files\n", fileName)
 
-	packet := protocol.NewPublishFilePacket(internal_file.filename, internal_file.fileHash, internal_file.chunkHashes)
+	packet := protocol.NewPublishFilePacket(fileName, fileSize, fileHash, chunkHashes)
 	n.conn.EnqueuePacket(&packet)
 	fmt.Println("Sent publish file packet to tracker")
 
@@ -101,10 +103,7 @@ func (n *Node) status(_ []string) error {
 	if n.pending.Len() != 0 {
 		fmt.Println("Pending files:")
 		n.pending.ForEach(func(filename string, file *File) {
-			fmt.Printf("%s at %s\n", file.filename, file.filepath)
-			fmt.Printf("Hash: %v\n", file.fileHash)
-			fmt.Printf("Chunk hashes: %v\n", file.chunkHashes)
-			fmt.Printf("Bitfield: %b\n", file.bitfield)
+			fmt.Printf("%s at %s\n", file.FileName, file.Path)
 		})
 
 		fmt.Printf("\n")
@@ -113,10 +112,7 @@ func (n *Node) status(_ []string) error {
 	if n.published.Len() != 0 {
 		fmt.Println("Published files:")
 		n.published.ForEach(func(filename string, file *File) {
-			fmt.Printf("%s at %s\n", file.filename, file.filepath)
-			fmt.Printf("Hash: %v\n", file.fileHash)
-			fmt.Printf("Chunk hashes: %v\n", file.chunkHashes)
-			fmt.Printf("Bitfield: %b\n", file.bitfield)
+			fmt.Printf("%s at %s\n", file.FileName, file.Path)
 		})
 
 		fmt.Printf("\n")
@@ -124,10 +120,9 @@ func (n *Node) status(_ []string) error {
 
 	if n.forDownload.Len() != 0 {
 		fmt.Println("Files for download:")
-		n.forDownload.ForEach(func(filename string, file *File) {
-			fmt.Printf("%s", file.filename)
-			fmt.Printf("Hash: %v\n", file.fileHash)
-			fmt.Printf("Chunk hashes: %v\n", file.chunkHashes)
+		n.forDownload.ForEach(func(filename string, file *ForDownloadFile) {
+			fmt.Printf("%s with size %d\n", file.FileName, file.FileSize)
+			fmt.Printf("Chunks %d/%d\n", file.DownloadedChunks.Len(), len(file.ChunkHashes))
 		})
 	}
 

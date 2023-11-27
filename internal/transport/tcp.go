@@ -1,4 +1,4 @@
-package connection
+package transport
 
 import (
 	"PessiTorrent/internal/protocol"
@@ -9,17 +9,17 @@ import (
 	"net"
 )
 
-type PacketHandler func(packet interface{}, conn *Connection)
+type TCPPacketHandler func(packet interface{}, conn *TCPConnection)
 
-type Connection struct {
+type TCPConnection struct {
 	connection   net.Conn
 	readWrite    bufio.ReadWriter
 	writeQueue   chan protocol.Packet
-	handlePacket PacketHandler
+	handlePacket TCPPacketHandler
 }
 
-func NewConnection(conn net.Conn, handlePacket PacketHandler) Connection {
-	return Connection{
+func NewTCPConnection(conn net.Conn, handlePacket TCPPacketHandler) TCPConnection {
+	return TCPConnection{
 		conn,
 		*bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)),
 		make(chan protocol.Packet),
@@ -27,40 +27,40 @@ func NewConnection(conn net.Conn, handlePacket PacketHandler) Connection {
 	}
 }
 
-func (conn *Connection) Start() {
+func (conn *TCPConnection) Start() {
 	go conn.writeLoop()
 	go conn.readLoop()
 }
 
-func (conn *Connection) Stop() {
+func (conn *TCPConnection) Stop() {
 	err := conn.connection.Close()
 	if err != nil {
-		fmt.Println("Error closing connection: ", err)
+		fmt.Println("Error closing TCP connection:", err)
 	}
 }
 
-func (conn *Connection) writeLoop() {
+func (conn *TCPConnection) writeLoop() {
 	for {
 		packet := <-conn.writeQueue
 		err := protocol.SerializePacket(conn.readWrite, packet)
 		if err != nil {
-			fmt.Println("Error serializing packet: ", err)
+			fmt.Println("Error serializing packet:", err)
 			return
 		}
 
 		err = conn.readWrite.Flush()
 		if err != nil {
-			fmt.Println("Error flushing buffer: ", err)
+			fmt.Println("Error flushing buffer:", err)
 			return
 		}
 	}
 }
 
-func (conn *Connection) EnqueuePacket(packet protocol.Packet) {
+func (conn *TCPConnection) EnqueuePacket(packet protocol.Packet) {
 	conn.writeQueue <- packet
 }
 
-func (conn *Connection) readLoop() {
+func (conn *TCPConnection) readLoop() {
 	for {
 		packet, err := protocol.DeserializePacket(conn.readWrite)
 		if err != nil {
@@ -68,18 +68,19 @@ func (conn *Connection) readLoop() {
 				fmt.Println("Connection from", conn.RemoteAddr(), "closed")
 				return
 			}
-			fmt.Println("Error reading packet: ", err)
-			return
+
+			fmt.Println("Error deserializing packet:", err)
+			continue
 		}
 
-		conn.handlePacket(packet, conn)
+		go conn.handlePacket(packet, conn)
 	}
 }
 
-func (conn *Connection) LocalAddr() net.Addr {
+func (conn *TCPConnection) LocalAddr() net.Addr {
 	return conn.connection.LocalAddr()
 }
 
-func (conn *Connection) RemoteAddr() net.Addr {
+func (conn *TCPConnection) RemoteAddr() net.Addr {
 	return conn.connection.RemoteAddr()
 }

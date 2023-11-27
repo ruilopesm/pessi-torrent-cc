@@ -34,3 +34,4 @@ config.*.yml
 # Others
 temp/
 bin/golangci-lint
+downloads/

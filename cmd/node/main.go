@@ -3,9 +3,9 @@ package main
 import (
 	"PessiTorrent/internal/cli"
 	"PessiTorrent/internal/config"
-	"PessiTorrent/internal/connection"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
+	"PessiTorrent/internal/transport"
 	"PessiTorrent/internal/utils"
 	"flag"
 	"fmt"
@@ -15,14 +15,15 @@ import (
 )
 
 type Node struct {
-	ipAddr     [4]byte
 	serverAddr string
 	udpPort    uint16
-	conn       connection.Connection
+
+	conn transport.TCPConnection
+	srv  transport.UDPServer
 
 	published   structures.SynchronizedMap[*File]
 	pending     structures.SynchronizedMap[*File]
-	forDownload structures.SynchronizedMap[*File]
+	forDownload structures.SynchronizedMap[*ForDownloadFile]
 
 	quitch chan struct{}
 }
@@ -30,24 +31,24 @@ type Node struct {
 func NewNode(serverAddr string, listenUDPPort string) Node {
 	udpPort, err := utils.StrToUDPPort(listenUDPPort)
 	if err != nil {
-		fmt.Println("Error parsing udp port:", err)
+		fmt.Println("Error parsing UDP port:", err)
 		os.Exit(1)
 	}
 
 	return Node{
-		serverAddr:  serverAddr,
-		udpPort:     uint16(udpPort),
-		published:   structures.NewSynchronizedMap[*File](),
+		serverAddr: serverAddr,
+		udpPort:    uint16(udpPort),
+
 		pending:     structures.NewSynchronizedMap[*File](),
-		forDownload: structures.NewSynchronizedMap[*File](),
-		quitch:      make(chan struct{}),
+		published:   structures.NewSynchronizedMap[*File](),
+		forDownload: structures.NewSynchronizedMap[*ForDownloadFile](),
+
+		quitch: make(chan struct{}),
 	}
 }
 
-func (n *Node) handlePacket(packet interface{}, conn *connection.Connection) {
+func (n *Node) handleTCPPackets(packet interface{}, conn *transport.TCPConnection) {
 	switch data := packet.(type) {
-	case *protocol.PublishFilePacket:
-		n.handlePublishFilePacket(packet.(*protocol.PublishFilePacket), conn)
 	case *protocol.PublishFileSuccessPacket:
 		n.handlePublishFileSuccessPacket(packet.(*protocol.PublishFileSuccessPacket), conn)
 	case *protocol.AnswerNodesPacket:
@@ -61,21 +62,46 @@ func (n *Node) handlePacket(packet interface{}, conn *connection.Connection) {
 	}
 }
 
+func (n *Node) handleUDPPackets(packet interface{}, addr *net.UDPAddr) {
+	switch data := packet.(type) {
+	case *protocol.RequestChunksPacket:
+		n.handleRequestChunksPacket(packet.(*protocol.RequestChunksPacket), addr)
+	default:
+		fmt.Println("Unknown packet type received:", data)
+	}
+}
+
 func (n *Node) Start() error {
+	// Dial tracker using TCP
 	conn, err := net.Dial("tcp4", n.serverAddr)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 
-	n.conn = connection.NewConnection(conn, n.handlePacket)
-	n.ipAddr = utils.TCPAddrToBytes(conn.LocalAddr())
+	n.conn = transport.NewTCPConnection(conn, n.handleTCPPackets)
 	go n.conn.Start()
 
-	// TODO: Listen on udp
+	// Listen on UDP
+	udpAddr := net.UDPAddr{
+		IP:   net.IPv4zero,
+		Port: int(n.udpPort),
+	}
+
+	udpConn, err := net.ListenUDP("udp4", &udpAddr)
+	if err != nil {
+		return err
+	}
+	defer udpConn.Close()
+
+	n.srv = transport.NewUDPServer(*udpConn, n.handleUDPPackets)
+	go n.srv.Start()
+
+	fmt.Println("Node listening UDP on", udpConn.LocalAddr())
 
 	// Notify tracker of the node's existence
-	packet := protocol.NewInitPacket(n.ipAddr, n.udpPort)
+	ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
+	packet := protocol.NewInitPacket(ipAddr, n.udpPort)
 	n.conn.EnqueuePacket(&packet)
 
 	go n.StartCLI()

@@ -64,7 +64,7 @@ func TestHashFileChunks(t *testing.T) {
 
 	var actualChunkHashes [][20]byte
 	// Call the HashFileChunks function with the temporary file
-	err = HashFileChunks(tempFile, &actualChunkHashes)
+	_, err = HashFileChunks(tempFile, &actualChunkHashes)
 	if err != nil {
 		t.Fatalf("Error hashing file chunks: %v", err)
 	}

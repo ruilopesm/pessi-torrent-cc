@@ -10,6 +10,8 @@ const (
 	RequestFileType
 	AnswerNodesType
 	RemoveFileType
+	RequestChunksType
+	ChunkType
 )
 
 type Packet interface {
@@ -36,6 +38,10 @@ func PacketStructFromType(packetType uint8) Packet {
 		return &AnswerNodesPacket{}
 	case RemoveFileType:
 		return &RemoveFilePacket{}
+	case RequestChunksType:
+		return &RequestChunksPacket{}
+	case ChunkType:
+		return &ChunkPacket{}
 	default:
 		return nil
 	}

@@ -62,7 +62,7 @@ func TestBytes(t *testing.T) {
 
 func TestSerialize(t *testing.T) {
 	// create dummy PublishFilePacket
-	packet := NewPublishFilePacket("test.txt", [20]byte{1, 2, 3, 4, 5}, [][20]byte{{6, 7, 8}, {9, 10, 11}})
+	packet := NewPublishFilePacket("test.txt", 6, [20]byte{1, 2, 3, 4, 5}, [][20]byte{{6, 7, 8}, {9, 10, 11}})
 
 	var deserialize PublishFilePacket
 	testSerializeStruct(&packet, &deserialize, t)
@@ -83,7 +83,7 @@ func TestSerialize(t *testing.T) {
 	checkEquals(publishChunkPacket, deserializePublishChunk, t)
 
 	// create dummy AnswerNodesPacket
-	answerNodesPacket := NewAnswerNodesPacket(1, [][4]byte{{1, 2, 3, 4}}, []uint16{1, 2, 3, 4, 5}, [][]uint16{{1, 2, 3, 4, 5}})
+	answerNodesPacket := NewAnswerNodesPacket("filename.txt", 5, [20]byte{1, 2, 3, 4, 5}, [][20]byte{{6, 7, 8}, {9, 10, 11}}, 1, [][4]byte{{1, 2, 3, 4}}, []uint16{1, 2, 3, 4, 5}, [][]uint16{{1, 2, 3, 4, 5}})
 
 	var deserializeAnswerNodes AnswerNodesPacket
 	testSerializeStruct(&answerNodesPacket, &deserializeAnswerNodes, t)

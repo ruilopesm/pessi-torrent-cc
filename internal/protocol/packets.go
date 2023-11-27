@@ -3,14 +3,14 @@ package protocol
 // NODE -> TRACKER
 
 type InitPacket struct {
-	UDPPort uint16
 	IPAddr  [4]byte
+	UDPPort uint16
 }
 
 func NewInitPacket(ipAddr [4]byte, udpPort uint16) InitPacket {
 	return InitPacket{
-		UDPPort: udpPort,
 		IPAddr:  ipAddr,
+		UDPPort: udpPort,
 	}
 }
 
@@ -19,18 +19,18 @@ func (ip *InitPacket) GetPacketType() uint8 {
 }
 
 type PublishFilePacket struct {
-	NumberOfChunks uint16
-	FileHash       [20]byte
-	FileName       string
-	ChunkHashes    [][20]byte
+	FileName    string
+	FileSize    uint64
+	FileHash    [20]byte
+	ChunkHashes [][20]byte
 }
 
-func NewPublishFilePacket(fileName string, fileHash [20]byte, chunkHashes [][20]byte) PublishFilePacket {
+func NewPublishFilePacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte) PublishFilePacket {
 	return PublishFilePacket{
-		NumberOfChunks: uint16(len(chunkHashes)),
-		FileHash:       fileHash,
-		FileName:       fileName,
-		ChunkHashes:    chunkHashes,
+		FileName:    fileName,
+		FileSize:    fileSize,
+		FileHash:    fileHash,
+		ChunkHashes: chunkHashes,
 	}
 }
 
@@ -118,19 +118,27 @@ func (nf *NotFoundPacket) GetPacketType() uint8 {
 }
 
 type AnswerNodesPacket struct {
+	FileName      string
+	FileSize      uint64
+	FileHash      [20]byte
+	ChunkHashes   [][20]byte
 	NumberOfNodes uint16
 	Nodes         []NodeFileInfo
 }
 
 type NodeFileInfo struct {
-	BitfieldSize uint16
-	Port         uint16
 	IPAddr       [4]byte
+	Port         uint16
+	BitfieldSize uint16
 	Bitfield     []uint8
 }
 
-func NewAnswerNodesPacket(nNodes uint16, ipAddrs [][4]byte, ports []uint16, bitfields [][]uint16) AnswerNodesPacket {
+func NewAnswerNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte, nNodes uint16, ipAddrs [][4]byte, ports []uint16, bitfields [][]uint16) AnswerNodesPacket {
 	an := AnswerNodesPacket{
+		FileName:      fileName,
+		FileSize:      fileSize,
+		FileHash:      fileHash,
+		ChunkHashes:   chunkHashes,
 		NumberOfNodes: nNodes,
 	}
 
@@ -165,4 +173,40 @@ func NewRemoveFilePacket(fileName string) RemoveFilePacket {
 
 func (rf *RemoveFilePacket) GetPacketType() uint8 {
 	return RemoveFileType
+}
+
+// NODE -> NODE
+
+type RequestChunksPacket struct {
+	FileName string
+	Chunks   []uint16
+}
+
+func NewRequestChunksPacket(fileName string, chunks []uint16) RequestChunksPacket {
+	return RequestChunksPacket{
+		FileName: fileName,
+		Chunks:   chunks,
+	}
+}
+
+func (rc *RequestChunksPacket) GetPacketType() uint8 {
+	return RequestChunksType
+}
+
+type ChunkPacket struct {
+	FileName     string
+	Chunk        uint16
+	ChunkContent []uint8
+}
+
+func NewChunkPacket(fileName string, chunk uint16, chunkContent []uint8) ChunkPacket {
+	return ChunkPacket{
+		FileName:     fileName,
+		Chunk:        chunk,
+		ChunkContent: chunkContent,
+	}
+}
+
+func (c *ChunkPacket) GetPacketType() uint8 {
+	return ChunkType
 }
