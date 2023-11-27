@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"syscall"
+	"strings"
 )
 
 type TCPPacketHandler func(packet interface{}, conn *TCPConnection)
@@ -75,7 +75,7 @@ func (conn *TCPConnection) readLoop() {
 	for {
 		packet, err := protocol.DeserializePacket(conn.readWrite)
 		if err != nil {
-			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.WSAECONNRESET) {
+			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) || strings.Contains(err.Error(), "read tcp4") {
 				logger.Info("Connection from %s closed", conn.RemoteAddr())
 				conn.Stop()
 				return
