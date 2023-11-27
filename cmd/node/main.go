@@ -2,13 +2,16 @@ package main
 
 import (
 	"PessiTorrent/internal/cli"
+	"PessiTorrent/internal/config"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/transport"
 	"PessiTorrent/internal/utils"
+	"flag"
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 )
 
 type Node struct {
@@ -122,15 +125,23 @@ func (n *Node) Stop() {
 }
 
 func main() {
-	if len(os.Args) != 3 {
-		fmt.Println("Usage: node <server ip:port> <UDP port>")
+	// TODO: check if port is inside udp range
+
+	conf, err := config.NewConfig(config.ConfigPath)
+	if err != nil {
+		fmt.Println("Error reading config:", err)
 		return
 	}
+	trackerAddr := conf.Tracker.Host + ":" + strconv.Itoa(conf.Tracker.Port)
+	udpPort := strconv.Itoa(conf.Node.Port)
 
-	// TODO: check if port is inside UDP range
+	flag.StringVar(&trackerAddr, "t", trackerAddr, "The address of the tracker")
+	flag.StringVar(&udpPort, "p", udpPort, "The port to listen on")
+	flag.Parse()
 
-	node := NewNode(os.Args[1], os.Args[2])
-	err := node.Start()
+	node := NewNode(trackerAddr, udpPort)
+
+	err = node.Start()
 	if err != nil {
 		fmt.Println("Error starting node:", err)
 	}

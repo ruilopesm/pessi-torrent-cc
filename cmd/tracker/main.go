@@ -1,13 +1,15 @@
 package main
 
 import (
+	"PessiTorrent/internal/config"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/transport"
+	"flag"
 	"fmt"
 	"log"
 	"net"
-	"os"
+	"strconv"
 )
 
 type Tracker struct {
@@ -78,15 +80,20 @@ func (t *Tracker) handlePacket(packet interface{}, conn *transport.TCPConnection
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Println("Usage: tracker <listen port>")
+	// TODO: check if port is inside tcp range
+
+	conf, err := config.NewConfig(config.ConfigPath)
+	if err != nil {
+		fmt.Println("Error reading config:", err)
 		return
 	}
+	udpPort := strconv.Itoa(conf.Tracker.Port)
 
-	// TODO: check if port is inside TCP range
+	flag.StringVar(&udpPort, "p", udpPort, "The port to listen on")
+	flag.Parse()
 
-	tracker := NewTracker(os.Args[1])
-	err := tracker.Start()
+	tracker := NewTracker(udpPort)
+	err = tracker.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
