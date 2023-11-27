@@ -79,7 +79,6 @@ func (n *Node) Start() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	n.conn = transport.NewTCPConnection(conn, n.handleTCPPackets, n.Stop)
 	go n.conn.Start()
