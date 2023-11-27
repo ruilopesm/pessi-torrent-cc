@@ -2,6 +2,7 @@ package cli
 
 import (
 	"PessiTorrent/internal/logger"
+	"errors"
 	"fmt"
 	"golang.org/x/term"
 	"io"
@@ -98,7 +99,10 @@ func (c *CLI) Start() {
 	for {
 		input, err := c.console.ReadInput()
 		if err != nil {
-			// TODO: handle EOF here
+			if errors.Is(err, io.EOF) {
+				c.shutdownHook()
+				break
+			}
 			log.Panicf("Error reading input: %s\n", err)
 		}
 

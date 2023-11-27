@@ -10,6 +10,7 @@ import (
 	"PessiTorrent/internal/utils"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -127,6 +128,7 @@ func (n *Node) StartCLI(console cli.Console) {
 
 func (n *Node) Stop() {
 	n.quitch <- struct{}{}
+	n.srv.Stop()
 }
 
 func main() {
@@ -134,7 +136,7 @@ func main() {
 
 	conf, err := config.NewConfig(config.ConfigPath)
 	if err != nil {
-		fmt.Println("Error reading config:", err)
+		log.Panic("Error reading config:", err)
 		return
 	}
 	trackerAddr := conf.Tracker.Host + ":" + strconv.Itoa(conf.Tracker.Port)
@@ -148,6 +150,6 @@ func main() {
 
 	err = node.Start()
 	if err != nil {
-		fmt.Println("Error starting node:", err)
+		log.Panic("Error starting node:", err)
 	}
 }

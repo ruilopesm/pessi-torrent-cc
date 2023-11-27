@@ -3,6 +3,7 @@ package transport
 import (
 	"PessiTorrent/internal/protocol"
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 )
@@ -42,6 +43,9 @@ func (srv *UDPServer) readLoop() {
 	for {
 		n, addr, err := srv.connection.ReadFromUDP(srv.readBuffer)
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				break
+			}
 			fmt.Println("Error reading from UDP connection:", err)
 			continue
 		}
