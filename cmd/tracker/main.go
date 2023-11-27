@@ -58,7 +58,7 @@ func (t *Tracker) acceptLoop() {
 			fmt.Println("Accept error:", err)
 			continue
 		}
-		conn := transport.NewTCPConnection(c, t.handlePacket)
+		conn := transport.NewTCPConnection(c, t.handlePacket, func() {})
 		logger.Info("Node %s connected", conn.RemoteAddr())
 
 		go conn.Start()

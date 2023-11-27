@@ -18,13 +18,15 @@ type UDPServer struct {
 	connection   net.UDPConn
 	readBuffer   []byte
 	handlePacket UDPPacketHandler
+	onClose      func()
 }
 
-func NewUDPServer(conn net.UDPConn, handlePacket UDPPacketHandler) UDPServer {
+func NewUDPServer(conn net.UDPConn, handlePacket UDPPacketHandler, onClose func()) UDPServer {
 	return UDPServer{
 		conn,
 		make([]byte, UDPMaxPacketSize),
 		handlePacket,
+		onClose,
 	}
 }
 
@@ -33,10 +35,7 @@ func (srv *UDPServer) Start() {
 }
 
 func (srv *UDPServer) Stop() {
-	err := srv.connection.Close()
-	if err != nil {
-		fmt.Println("Error closing UDP connection:", err)
-	}
+	srv.connection.Close()
 }
 
 func (srv *UDPServer) readLoop() {
@@ -44,6 +43,7 @@ func (srv *UDPServer) readLoop() {
 		n, addr, err := srv.connection.ReadFromUDP(srv.readBuffer)
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) {
+				srv.onClose()
 				break
 			}
 			fmt.Println("Error reading from UDP connection:", err)

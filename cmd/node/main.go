@@ -81,7 +81,7 @@ func (n *Node) Start() error {
 	}
 	defer conn.Close()
 
-	n.conn = transport.NewTCPConnection(conn, n.handleTCPPackets)
+	n.conn = transport.NewTCPConnection(conn, n.handleTCPPackets, n.Stop)
 	go n.conn.Start()
 
 	// Listen on UDP
@@ -96,7 +96,7 @@ func (n *Node) Start() error {
 	}
 	defer udpConn.Close()
 
-	n.srv = transport.NewUDPServer(*udpConn, n.handleUDPPackets)
+	n.srv = transport.NewUDPServer(*udpConn, n.handleUDPPackets, func() {})
 	go n.srv.Start()
 
 	// Notify tracker of the node's existence
@@ -127,8 +127,8 @@ func (n *Node) StartCLI(console cli.Console) {
 }
 
 func (n *Node) Stop() {
-	n.quitch <- struct{}{}
 	n.srv.Stop()
+	n.quitch <- struct{}{}
 }
 
 func main() {
@@ -150,6 +150,6 @@ func main() {
 
 	err = node.Start()
 	if err != nil {
-		log.Panic("Error starting node:", err)
+		fmt.Println("Error starting node: ", err)
 	}
 }
