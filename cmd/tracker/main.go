@@ -2,6 +2,7 @@ package main
 
 import (
 	"PessiTorrent/internal/config"
+	"PessiTorrent/internal/logger"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/transport"
@@ -58,7 +59,7 @@ func (t *Tracker) acceptLoop() {
 			continue
 		}
 		conn := transport.NewTCPConnection(c, t.handlePacket)
-		fmt.Printf("Node %s connected\n", conn.RemoteAddr())
+		logger.Info("Node %s connected", conn.RemoteAddr())
 
 		go conn.Start()
 	}

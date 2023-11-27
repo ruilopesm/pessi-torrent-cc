@@ -3,6 +3,7 @@ package main
 import (
 	"PessiTorrent/internal/cli"
 	"PessiTorrent/internal/config"
+	"PessiTorrent/internal/logger"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/transport"
@@ -97,22 +98,26 @@ func (n *Node) Start() error {
 	n.srv = transport.NewUDPServer(*udpConn, n.handleUDPPackets)
 	go n.srv.Start()
 
-	fmt.Println("Node listening UDP on", udpConn.LocalAddr())
-
 	// Notify tracker of the node's existence
 	ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
 	packet := protocol.NewInitPacket(ipAddr, n.udpPort)
 	n.conn.EnqueuePacket(&packet)
 
-	go n.StartCLI()
+	console := cli.CreateConsole()
+	logger.SetLogger(&console)
+	defer console.Close()
+
+	go n.StartCLI(console)
+
+	logger.Info("Node listening UDP on %v", udpConn.LocalAddr())
 
 	<-n.quitch
 
 	return nil
 }
 
-func (n *Node) StartCLI() {
-	c := cli.NewCLI(n.Stop)
+func (n *Node) StartCLI(console cli.Console) {
+	c := cli.NewCLI(n.Stop, console)
 	c.AddCommand("publish", "<file name>", "", 1, n.publish)
 	c.AddCommand("request", "<file name>", "", 1, n.requestFile)
 	c.AddCommand("status", "", "Show the status of the node", 0, n.status)
