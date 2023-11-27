@@ -1,11 +1,11 @@
 package main
 
 import (
+	"PessiTorrent/internal/logger"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/transport"
 	"PessiTorrent/internal/utils"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"os"
@@ -14,13 +14,13 @@ import (
 
 // Handler for when a node requests, to the tracker, the list of nodes who have a specific file
 func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn *transport.TCPConnection) {
-	fmt.Printf("Answer nodes packet received from %s\n", conn.RemoteAddr())
-	fmt.Printf("Number of nodes who got requested file: %d\n", packet.NumberOfNodes)
+	logger.Info("Answer nodes packet received from %s", conn.RemoteAddr())
+	logger.Info("Number of nodes who got requested file: %d", packet.NumberOfNodes)
 
 	// Update file in forDownload data structure
 	forDownloadFile, ok := n.forDownload.Get(packet.FileName)
 	if !ok {
-		fmt.Printf("File %s not found in forDownload files\n", packet.FileName)
+		logger.Warn("File %s not found in forDownload files", packet.FileName)
 		return
 	}
 
@@ -37,7 +37,7 @@ func (n *Node) requestFileByChunks(packet *protocol.AnswerNodesPacket, forDownlo
 	// Check for missing chunks
 	missingChunks := forDownloadFile.GetMissingChunks()
 	if len(missingChunks) == 0 {
-		fmt.Printf("File %s downloaded successfully\n", packet.FileName)
+		logger.Info("File %s downloaded successfully", packet.FileName)
 		n.forDownload.Delete(packet.FileName)
 		return
 	}
@@ -58,7 +58,7 @@ func (n *Node) requestFileByChunks(packet *protocol.AnswerNodesPacket, forDownlo
 				Port: int(node.Port),
 			}
 
-			fmt.Printf("Sending request chunks packet to %s\n", udpAddr)
+			logger.Info("Sending request chunks packet to %s", udpAddr)
 
 			go n.sendRequestChunksPacket(packet.FileName, missingChunksInNode, udpAddr, responsesChannel)
 		}
@@ -73,7 +73,7 @@ func (n *Node) requestFileByChunks(packet *protocol.AnswerNodesPacket, forDownlo
 		case chunkPacket := <-responsesChannel:
 			// Set received chunk as downloaded
 			forDownloadFile.SetDownloadedChunk(chunkPacket.Chunk)
-			fmt.Printf("Chunk %d of file %s downloaded\n", chunkPacket.Chunk, forDownloadFile.FileName)
+			logger.Info("Chunk %d of file %s downloaded", chunkPacket.Chunk, forDownloadFile.FileName)
 
 		case <-timeout:
 			// Retry to download missing chunks, if any
@@ -86,7 +86,7 @@ func (n *Node) sendRequestChunksPacket(fileName string, chunks []uint16, addr *n
 	// Create new UDP socket to handle this request and its responses
 	conn, err := net.ListenUDP("udp", nil)
 	if err != nil {
-		fmt.Printf("Error creating UDP socket: %v\n", err)
+		logger.Warn("Error creating UDP socket: %v", err)
 		return
 	}
 	defer conn.Close()
@@ -101,7 +101,7 @@ func (n *Node) sendRequestChunksPacket(fileName string, chunks []uint16, addr *n
 	for {
 		responsePacket, err := sock.ReadPacket()
 		if err != nil {
-			fmt.Printf("Error reading packet: %v\n", err)
+			logger.Warn("Error reading packet: %v", err)
 			return
 		}
 
@@ -109,26 +109,26 @@ func (n *Node) sendRequestChunksPacket(fileName string, chunks []uint16, addr *n
 		case *protocol.ChunkPacket:
 			responsesChannel <- packet
 		default:
-			fmt.Printf("Unknown packet type: %v\n", packet)
+			logger.Warn("Unknown packet type: %v", packet)
 		}
 	}
 }
 
 // Handler for when a node requests chunks of a file to this node
 func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, addr *net.UDPAddr) {
-	fmt.Printf("Request chunks packet received from %s\n", addr)
+	logger.Info("Request chunks packet received from %s", addr)
 
 	// Get file from published files
 	publishedFile, ok := n.published.Get(packet.FileName)
 	if !ok {
-		fmt.Printf("File %s not found in published files\n", packet.FileName)
+		logger.Warn("File %s not found in published files", packet.FileName)
 		return
 	}
 
 	// Open file by the given path
 	file, err := os.Open(publishedFile.Path)
 	if err != nil {
-		fmt.Printf("Error opening file: %v\n", err)
+		logger.Warn("Error opening file: %v", err)
 		return
 	}
 
@@ -137,12 +137,12 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 
 	// Send requested chunks
 	for _, chunk := range packet.Chunks {
-		fmt.Printf("Sending chunk %d of file %s to %s\n", chunk, packet.FileName, addr)
+		logger.Info("Sending chunk %d of file %s to %s", chunk, packet.FileName, addr)
 
 		// Seek to the beginning of the chunk
 		_, err = file.Seek(int64(uint64(chunk)*chunkSize), 0)
 		if err != nil {
-			fmt.Printf("Error seeking file: %v\n", err)
+			logger.Warn("Error seeking file: %v", err)
 			return
 		}
 
@@ -150,7 +150,7 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 		chunkContent := make([]byte, chunkSize)
 		read, err := file.Read(chunkContent)
 		if err != nil && !errors.Is(err, io.EOF) {
-			fmt.Printf("Error reading file: %v\n", err)
+			logger.Warn("Error reading file: %v", err)
 			return
 		}
 
@@ -162,7 +162,7 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 
 // Handler for when a node publishes a file in the network
 func (n *Node) handlePublishFileSuccessPacket(packet *protocol.PublishFileSuccessPacket, conn *transport.TCPConnection) {
-	fmt.Printf("File %s published in the network successfully\n", packet.FileName)
+	logger.Info("File %s published in the network successfully", packet.FileName)
 
 	// Remove file from pending and add it to published, since tracker has accepted it
 	file, _ := n.pending.Get(packet.FileName)
@@ -172,7 +172,7 @@ func (n *Node) handlePublishFileSuccessPacket(packet *protocol.PublishFileSucces
 
 // Handler for when the file, the node is trying to publish, already exists in the network
 func (n *Node) handleAlreadyExistsPacket(packet *protocol.AlreadyExistsPacket, conn *transport.TCPConnection) {
-	fmt.Printf("File %s already exists in the network\n", packet.Filename)
+	logger.Info("File %s already exists in the network", packet.Filename)
 
 	// Remove file from pending, since tracker has rejected it
 	n.pending.Delete(packet.Filename)
@@ -180,7 +180,7 @@ func (n *Node) handleAlreadyExistsPacket(packet *protocol.AlreadyExistsPacket, c
 
 // Handler for when the file, the node is trying to download, does not exist in the network
 func (n *Node) handleNotFoundPacket(packet *protocol.NotFoundPacket, conn *transport.TCPConnection) {
-	fmt.Printf("File %s was not found in the network\n", packet.Filename)
+	logger.Info("File %s was not found in the network", packet.Filename)
 
 	// Remove file from downloading, since it does not exist
 	n.forDownload.Delete(packet.Filename)

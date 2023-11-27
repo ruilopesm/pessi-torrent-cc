@@ -1,9 +1,9 @@
 package main
 
 import (
+	"PessiTorrent/internal/logger"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/utils"
-	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -66,11 +66,11 @@ func (n *Node) publishFile(path string) error {
 
 	newFile := NewFile(fileName, path)
 	n.pending.Put(fileName, &newFile)
-	fmt.Printf("Added file %s to pending files\n", fileName)
+	logger.Info("Added file %s to pending files", fileName)
 
 	packet := protocol.NewPublishFilePacket(fileName, fileSize, fileHash, chunkHashes)
 	n.conn.EnqueuePacket(&packet)
-	fmt.Println("Sent publish file packet to tracker")
+	logger.Info("Sent publish file packet to tracker")
 
 	return nil
 }
@@ -96,33 +96,33 @@ func (n *Node) publishDirectory(path string) error {
 
 // status
 func (n *Node) status(_ []string) error {
-	fmt.Printf("Currently connected to tracker with address %s\n", n.serverAddr)
+	logger.Info("Currently connected to tracker with address %s", n.serverAddr)
 
-	fmt.Printf("\n")
+	logger.Info("")
 
 	if n.pending.Len() != 0 {
-		fmt.Println("Pending files:")
+		logger.Info("Pending files:")
 		n.pending.ForEach(func(filename string, file *File) {
-			fmt.Printf("%s at %s\n", file.FileName, file.Path)
+			logger.Info("%s at %s", file.FileName, file.Path)
 		})
 
-		fmt.Printf("\n")
+		logger.Info("")
 	}
 
 	if n.published.Len() != 0 {
-		fmt.Println("Published files:")
+		logger.Info("Published files:")
 		n.published.ForEach(func(filename string, file *File) {
-			fmt.Printf("%s at %s\n", file.FileName, file.Path)
+			logger.Info("%s at %s", file.FileName, file.Path)
 		})
 
-		fmt.Printf("\n")
+		logger.Info("")
 	}
 
 	if n.forDownload.Len() != 0 {
-		fmt.Println("Files for download:")
+		logger.Info("Files for download:")
 		n.forDownload.ForEach(func(filename string, file *ForDownloadFile) {
-			fmt.Printf("%s with size %d\n", file.FileName, file.FileSize)
-			fmt.Printf("Chunks %d/%d\n", file.DownloadedChunks.Len(), len(file.ChunkHashes))
+			logger.Info("%s with size %d", file.FileName, file.FileSize)
+			logger.Info("Chunks %d/%d", file.DownloadedChunks.Len(), len(file.ChunkHashes))
 		})
 	}
 
@@ -138,7 +138,7 @@ func (n *Node) removeFile(args []string) error {
 	packet := protocol.NewRemoveFilePacket(filename)
 	n.conn.EnqueuePacket(&packet)
 
-	fmt.Printf("Successfully removed file %s from the network", filename)
+	logger.Info("Successfully removed file %s from the network", filename)
 
 	return nil
 }

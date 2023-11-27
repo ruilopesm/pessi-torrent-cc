@@ -1,8 +1,12 @@
 package cli
 
 import (
-	"bufio"
+	"PessiTorrent/internal/logger"
+	"errors"
 	"fmt"
+	"golang.org/x/term"
+	"io"
+	"log"
 	"os"
 	"strings"
 )
@@ -10,6 +14,34 @@ import (
 type CLI struct {
 	commands     map[string]Command
 	shutdownHook func()
+	console      Console
+}
+
+func (c *Console) Info(message string, args ...any) {
+	message = fmt.Sprintf(message, args...)
+	_, err := c.Term.Write([]byte(message + "\n"))
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (c *Console) Warn(message string, args ...any) {
+	message = fmt.Sprintf(message, args...)
+	_, err := c.Term.Write([]byte(message + "\n"))
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (c *Console) ReadInput() (string, error) {
+	return c.Term.ReadLine()
+}
+
+func (c *Console) Close() {
+	err := term.Restore(int(os.Stdin.Fd()), c.OldState)
+	if err != nil {
+		panic(err)
+	}
 }
 
 type Command struct {
@@ -20,10 +52,34 @@ type Command struct {
 	Execute      func(args []string) error
 }
 
-func NewCLI(shutdownHook func()) CLI {
+type Console struct {
+	Term     *term.Terminal
+	OldState *term.State
+}
+
+func CreateConsole() Console {
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		panic(err)
+	}
+
+	screen := struct {
+		io.Reader
+		io.Writer
+	}{os.Stdin, os.Stdout}
+
+	terminal := term.NewTerminal(screen, "> ")
+	return Console{
+		Term:     terminal,
+		OldState: oldState,
+	}
+}
+
+func NewCLI(shutdownHook func(), console Console) CLI {
 	return CLI{
 		commands:     make(map[string]Command),
 		shutdownHook: shutdownHook,
+		console:      console,
 	}
 }
 
@@ -38,15 +94,16 @@ func (c *CLI) AddCommand(name string, usage string, description string, numberOf
 }
 
 func (c *CLI) Start() {
-	c.help()
+	logger.Info("Type 'help' for a list of available commands")
 
 	for {
-		fmt.Printf("> ")
-
-		reader := bufio.NewReader(os.Stdin)
-		input, err := reader.ReadString('\n')
+		input, err := c.console.ReadInput()
 		if err != nil {
-			continue
+			if errors.Is(err, io.EOF) {
+				c.shutdownHook()
+				break
+			}
+			log.Panicf("Error reading input: %s\n", err)
 		}
 
 		input = strings.TrimSuffix(input, "\n")
@@ -58,14 +115,14 @@ func (c *CLI) Start() {
 		if cmd, ok := c.commands[parts[0]]; ok {
 			args := parts[1:]
 			if len(args) != cmd.NumberOfArgs {
-				fmt.Printf("Wrong number of arguments for %s\n", cmd.Name)
-				fmt.Printf("Usage: %s %s\n", cmd.Name, cmd.Usage)
+				logger.Warn("Wrong number of arguments for %s", cmd.Name)
+				logger.Warn("Usage: %s %s", cmd.Name, cmd.Usage)
 				continue
 			}
 
 			err := cmd.Execute(args)
 			if err != nil {
-				fmt.Printf("Error executing command %s: %s\n", cmd.Name, err)
+				logger.Warn("Error executing command %s: %s", cmd.Name, err)
 			}
 		} else if parts[0] == "exit" {
 			c.shutdownHook()
@@ -73,7 +130,7 @@ func (c *CLI) Start() {
 		} else if parts[0] == "help" {
 			c.help()
 		} else {
-			fmt.Printf("Unknown command %s\n", parts[0])
+			logger.Info("Unknown command %s", parts[0])
 			c.help()
 			continue
 		}
@@ -81,16 +138,16 @@ func (c *CLI) Start() {
 }
 
 func (c *CLI) help() {
-	fmt.Println("Available commands:")
+	logger.Info("Available commands:")
 
 	for _, cmd := range c.commands {
 		if cmd.Usage != "" {
-			fmt.Printf("\t%s\t%s\t%s\n", cmd.Name, cmd.Usage, cmd.Description)
+			logger.Info("\t%s\t%s\t%s", cmd.Name, cmd.Usage, cmd.Description)
 		} else {
-			fmt.Printf("\t%s\t%s\n", cmd.Name, cmd.Description)
+			logger.Info("\t%s\t%s", cmd.Name, cmd.Description)
 		}
 	}
 
-	fmt.Println("\thelp\tShow this help")
-	fmt.Println("\texit\tExit the program")
+	logger.Info("\thelp\tShow this help")
+	logger.Info("\texit\tExit the program")
 }

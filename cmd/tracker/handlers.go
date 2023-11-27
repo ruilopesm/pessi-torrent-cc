@@ -1,27 +1,27 @@
 package main
 
 import (
+	"PessiTorrent/internal/logger"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/transport"
 	"PessiTorrent/internal/utils"
-	"fmt"
 )
 
 func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *transport.TCPConnection) {
-	fmt.Printf("Init packet received from %s\n", conn.RemoteAddr())
+	logger.Info("Init packet received from %s", conn.RemoteAddr())
 
 	newNode := NewNodeInfo(*conn, packet.UDPPort)
 	t.nodes.Add(&newNode)
 
-	fmt.Printf("Registered node with data: %v, %v\n", packet.IPAddr, packet.UDPPort)
+	logger.Info("Registered node with data: %v, %v", packet.IPAddr, packet.UDPPort)
 }
 
 func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, conn *transport.TCPConnection) {
-	fmt.Printf("Publish file packet received from %s\n", conn.RemoteAddr())
+	logger.Info("Publish file packet received from %s", conn.RemoteAddr())
 
 	// If file already exists
 	if t.files.Contains(packet.FileName) {
-		fmt.Printf("File %s published from %s already exists\n", packet.FileName, conn.RemoteAddr())
+		logger.Info("File %s published from %s already exists", packet.FileName, conn.RemoteAddr())
 
 		aePacket := protocol.NewAlreadyExistsPacket(packet.FileName)
 		conn.EnqueuePacket(&aePacket)
@@ -46,7 +46,7 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 }
 
 func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, conn *transport.TCPConnection) {
-	fmt.Printf("Request file packet received from %s\n", conn.RemoteAddr())
+	logger.Info("Request file packet received from %s", conn.RemoteAddr())
 
 	if t.files.Contains(packet.FileName) {
 		var nNodes uint16
@@ -69,7 +69,7 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 		anPacket := protocol.NewAnswerNodesPacket(file.FileName, file.FileSize, file.FileHash, file.ChunkHashes, nNodes, ipAddrs, ports, bitfields)
 		conn.EnqueuePacket(&anPacket)
 	} else {
-		fmt.Printf("File %s requested from %s does not exist\n", packet.FileName, conn.RemoteAddr())
+		logger.Info("File %s requested from %s does not exist", packet.FileName, conn.RemoteAddr())
 
 		nfPacket := protocol.NewNotFoundPacket(packet.FileName)
 		conn.EnqueuePacket(&nfPacket)
@@ -77,7 +77,7 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 }
 
 func (t *Tracker) handleRemoveFilePacket(packet *protocol.RemoveFilePacket, conn *transport.TCPConnection) {
-	fmt.Printf("Remove file packet received from %s\n", conn.RemoteAddr())
+	logger.Info("Remove file packet received from %s", conn.RemoteAddr())
 
 	// Remove file from the tracker
 	t.files.Delete(packet.FileName)

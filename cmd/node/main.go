@@ -3,12 +3,14 @@ package main
 import (
 	"PessiTorrent/internal/cli"
 	"PessiTorrent/internal/config"
+	"PessiTorrent/internal/logger"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/transport"
 	"PessiTorrent/internal/utils"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -77,9 +79,8 @@ func (n *Node) Start() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
-	n.conn = transport.NewTCPConnection(conn, n.handleTCPPackets)
+	n.conn = transport.NewTCPConnection(conn, n.handleTCPPackets, n.Stop)
 	go n.conn.Start()
 
 	// Listen on UDP
@@ -94,25 +95,29 @@ func (n *Node) Start() error {
 	}
 	defer udpConn.Close()
 
-	n.srv = transport.NewUDPServer(*udpConn, n.handleUDPPackets)
+	n.srv = transport.NewUDPServer(*udpConn, n.handleUDPPackets, func() {})
 	go n.srv.Start()
-
-	fmt.Println("Node listening UDP on", udpConn.LocalAddr())
 
 	// Notify tracker of the node's existence
 	ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
 	packet := protocol.NewInitPacket(ipAddr, n.udpPort)
 	n.conn.EnqueuePacket(&packet)
 
-	go n.StartCLI()
+	console := cli.CreateConsole()
+	logger.SetLogger(&console)
+	defer console.Close()
+
+	go n.StartCLI(console)
+
+	logger.Info("Node listening UDP on %v", udpConn.LocalAddr())
 
 	<-n.quitch
 
 	return nil
 }
 
-func (n *Node) StartCLI() {
-	c := cli.NewCLI(n.Stop)
+func (n *Node) StartCLI(console cli.Console) {
+	c := cli.NewCLI(n.Stop, console)
 	c.AddCommand("publish", "<file name>", "", 1, n.publish)
 	c.AddCommand("request", "<file name>", "", 1, n.requestFile)
 	c.AddCommand("status", "", "Show the status of the node", 0, n.status)
@@ -121,6 +126,7 @@ func (n *Node) StartCLI() {
 }
 
 func (n *Node) Stop() {
+	n.srv.Stop()
 	n.quitch <- struct{}{}
 }
 
@@ -129,7 +135,7 @@ func main() {
 
 	conf, err := config.NewConfig(config.ConfigPath)
 	if err != nil {
-		fmt.Println("Error reading config:", err)
+		log.Panic("Error reading config:", err)
 		return
 	}
 	trackerAddr := conf.Tracker.Host + ":" + strconv.Itoa(conf.Tracker.Port)
@@ -143,6 +149,6 @@ func main() {
 
 	err = node.Start()
 	if err != nil {
-		fmt.Println("Error starting node:", err)
+		fmt.Println("Error starting node: ", err)
 	}
 }
