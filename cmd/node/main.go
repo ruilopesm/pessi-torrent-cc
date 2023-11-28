@@ -103,7 +103,7 @@ func (n *Node) Start() error {
 	packet := protocol.NewInitPacket(ipAddr, n.udpPort)
 	n.conn.EnqueuePacket(&packet)
 
-	console := cli.CreateConsole()
+	console := cli.NewConsole()
 	logger.SetLogger(&console)
 	defer console.Close()
 
