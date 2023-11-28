@@ -2,28 +2,21 @@ package logger
 
 import (
 	"fmt"
-	"log"
+	"sync"
 )
 
 type Logger interface {
 	Info(message string, args ...any)
 	Warn(message string, args ...any)
+	Error(message string, args ...any)
 }
 
-type logger struct{}
-
-func (l logger) Info(message string, args ...any) {
-	message = fmt.Sprintf(message, args...)
-	log.Printf("%s\n", message)
-}
-
-func (l logger) Warn(message string, args ...any) {
-	message = fmt.Sprintf(message, args...)
-	log.Printf("%s\n", message)
+type logger struct {
+	sync.Mutex
 }
 
 func NewSimpleLogger() Logger {
-	return logger{}
+	return &logger{}
 }
 
 func SetLogger(l Logger) {
@@ -38,4 +31,29 @@ func Info(message string, args ...any) {
 
 func Warn(message string, args ...any) {
 	CurrentLogger.Warn(message, args...)
+}
+
+func Error(message string, args ...any) {
+	CurrentLogger.Error(message, args...)
+}
+
+func (l *logger) Info(message string, args ...any) {
+	l.Lock()
+	defer l.Unlock()
+	message = fmt.Sprintf(message, args...)
+	fmt.Printf("%s\n", message)
+}
+
+func (l *logger) Warn(message string, args ...any) {
+	l.Lock()
+	defer l.Unlock()
+	message = fmt.Sprintf(message, args...)
+	fmt.Printf("%s\n", message)
+}
+
+func (l *logger) Error(message string, args ...any) {
+	l.Lock()
+	defer l.Unlock()
+	message = fmt.Sprintf(message, args...)
+	fmt.Printf("%s\n", message)
 }

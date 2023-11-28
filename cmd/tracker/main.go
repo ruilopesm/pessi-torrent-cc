@@ -40,7 +40,7 @@ func (t *Tracker) Start() error {
 		return err
 	}
 	defer ln.Close()
-	fmt.Println("Tracker listening TCP on", ln.Addr())
+	logger.Info("Tracker listening TCP on %s", ln.Addr())
 
 	t.listener = ln
 

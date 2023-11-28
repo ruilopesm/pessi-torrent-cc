@@ -4,11 +4,12 @@ import (
 	"PessiTorrent/internal/logger"
 	"errors"
 	"fmt"
-	"golang.org/x/term"
 	"io"
 	"log"
 	"os"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 type CLI struct {
@@ -17,39 +18,12 @@ type CLI struct {
 	console      Console
 }
 
-func (c *Console) Info(message string, args ...any) {
-	message = fmt.Sprintf(message, args...)
-	_, err := c.Term.Write([]byte(message + "\n"))
-	if err != nil {
-		log.Fatal(err)
+func NewCLI(shutdownHook func(), console Console) CLI {
+	return CLI{
+		commands:     make(map[string]Command),
+		shutdownHook: shutdownHook,
+		console:      console,
 	}
-}
-
-func (c *Console) Warn(message string, args ...any) {
-	message = fmt.Sprintf(message, args...)
-	_, err := c.Term.Write([]byte(message + "\n"))
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func (c *Console) ReadInput() (string, error) {
-	return c.Term.ReadLine()
-}
-
-func (c *Console) Close() {
-	err := term.Restore(int(os.Stdin.Fd()), c.OldState)
-	if err != nil {
-		panic(err)
-	}
-}
-
-type Command struct {
-	Name         string
-	Usage        string
-	Description  string
-	NumberOfArgs int
-	Execute      func(args []string) error
 }
 
 type Console struct {
@@ -57,7 +31,7 @@ type Console struct {
 	OldState *term.State
 }
 
-func CreateConsole() Console {
+func NewConsole() Console {
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		panic(err)
@@ -75,12 +49,38 @@ func CreateConsole() Console {
 	}
 }
 
-func NewCLI(shutdownHook func(), console Console) CLI {
-	return CLI{
-		commands:     make(map[string]Command),
-		shutdownHook: shutdownHook,
-		console:      console,
+func (c *Console) ReadInput() (string, error) {
+	return c.Term.ReadLine()
+}
+
+func (c *Console) Close() {
+	err := term.Restore(int(os.Stdin.Fd()), c.OldState)
+	if err != nil {
+		panic(err)
 	}
+}
+
+func (c *Console) Info(message string, args ...any) {
+	message = fmt.Sprintf(message, args...)
+	_, _ = c.Term.Write([]byte(message + "\n"))
+}
+
+func (c *Console) Warn(message string, args ...any) {
+	message = fmt.Sprintf(message, args...)
+	_, _ = c.Term.Write([]byte(message + "\n"))
+}
+
+func (c *Console) Error(message string, args ...any) {
+	message = fmt.Sprintf(message, args...)
+	_, _ = c.Term.Write([]byte(message + "\n"))
+}
+
+type Command struct {
+	Name         string
+	Usage        string
+	Description  string
+	NumberOfArgs int
+	Execute      func(args []string) error
 }
 
 func (c *CLI) AddCommand(name string, usage string, description string, numberOfArgs int, execute func(args []string) error) {
