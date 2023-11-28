@@ -69,7 +69,7 @@ func TestSerialize(t *testing.T) {
 	checkEquals(packet, deserialize, t)
 
 	// create dummy InitPacket
-	initPacket := NewInitPacket([4]byte{1, 2, 3, 4}, 1234)
+	initPacket := NewInitPacket("portatil1.local", 1234)
 
 	var deserializeInit InitPacket
 	testSerializeStruct(&initPacket, &deserializeInit, t)
@@ -83,7 +83,7 @@ func TestSerialize(t *testing.T) {
 	checkEquals(publishChunkPacket, deserializePublishChunk, t)
 
 	// create dummy AnswerNodesPacket
-	answerNodesPacket := NewAnswerNodesPacket("filename.txt", 5, [20]byte{1, 2, 3, 4, 5}, [][20]byte{{6, 7, 8}, {9, 10, 11}}, 1, [][4]byte{{1, 2, 3, 4}}, []uint16{1, 2, 3, 4, 5}, [][]uint16{{1, 2, 3, 4, 5}})
+	answerNodesPacket := NewAnswerNodesPacket("filename.txt", 5, [20]byte{1, 2, 3, 4, 5}, [][20]byte{{6, 7, 8}, {9, 10, 11}}, 1, []string{"portatil1.local"}, []uint16{1, 2, 3, 4, 5}, [][]uint16{{1, 2, 3, 4, 5}})
 
 	var deserializeAnswerNodes AnswerNodesPacket
 	testSerializeStruct(&answerNodesPacket, &deserializeAnswerNodes, t)

@@ -3,6 +3,7 @@ package main
 import (
 	"PessiTorrent/internal/cli"
 	"PessiTorrent/internal/config"
+	"PessiTorrent/internal/dns"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
 	"PessiTorrent/internal/transport"
@@ -15,6 +16,8 @@ import (
 )
 
 type Node struct {
+	dns *dns.DNS
+
 	serverAddr string
 	udpPort    uint16
 
@@ -28,7 +31,7 @@ type Node struct {
 	quitch chan struct{}
 }
 
-func NewNode(serverAddr string, listenUDPPort string) Node {
+func NewNode(serverAddr string, listenUDPPort string, dnsAddr string) Node {
 	udpPort, err := utils.StrToUDPPort(listenUDPPort)
 	if err != nil {
 		fmt.Println("Error parsing UDP port:", err)
@@ -36,6 +39,8 @@ func NewNode(serverAddr string, listenUDPPort string) Node {
 	}
 
 	return Node{
+		dns: dns.NewDNS(dnsAddr),
+
 		serverAddr: serverAddr,
 		udpPort:    uint16(udpPort),
 
@@ -73,6 +78,7 @@ func (n *Node) handleUDPPackets(packet interface{}, addr *net.UDPAddr) {
 
 func (n *Node) Start() error {
 	// Dial tracker using TCP
+	// TODO: change this server address to use DNS
 	conn, err := net.Dial("tcp4", n.serverAddr)
 	if err != nil {
 		return err
@@ -101,7 +107,12 @@ func (n *Node) Start() error {
 
 	// Notify tracker of the node's existence
 	ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
-	packet := protocol.NewInitPacket(ipAddr, n.udpPort)
+	domain, err := n.dns.ResolveDomain(net.IP(ipAddr[:]).String())
+	if err != nil {
+		return err
+	}
+
+	packet := protocol.NewInitPacket(domain, n.udpPort)
 	n.conn.EnqueuePacket(&packet)
 
 	go n.StartCLI()
@@ -132,6 +143,7 @@ func main() {
 		fmt.Println("Error reading config:", err)
 		return
 	}
+	dns := conf.DNS.Host + ":" + strconv.Itoa(conf.DNS.Port)
 	trackerAddr := conf.Tracker.Host + ":" + strconv.Itoa(conf.Tracker.Port)
 	udpPort := strconv.Itoa(conf.Node.Port)
 
@@ -139,7 +151,7 @@ func main() {
 	flag.StringVar(&udpPort, "p", udpPort, "The port to listen on")
 	flag.Parse()
 
-	node := NewNode(trackerAddr, udpPort)
+	node := NewNode(trackerAddr, udpPort, dns)
 
 	err = node.Start()
 	if err != nil {

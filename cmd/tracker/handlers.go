@@ -3,17 +3,16 @@ package main
 import (
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/transport"
-	"PessiTorrent/internal/utils"
 	"fmt"
 )
 
 func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *transport.TCPConnection) {
 	fmt.Printf("Init packet received from %s\n", conn.RemoteAddr())
 
-	newNode := NewNodeInfo(*conn, packet.UDPPort)
+	newNode := NewNodeInfo(*conn, packet.UDPPort, packet.Name)
 	t.nodes.Add(&newNode)
 
-	fmt.Printf("Registered node with data: %v, %v\n", packet.IPAddr, packet.UDPPort)
+	fmt.Printf("Registered node with data: %s, %v\n", packet.Name, packet.UDPPort)
 }
 
 func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, conn *transport.TCPConnection) {
@@ -50,14 +49,14 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 
 	if t.files.Contains(packet.FileName) {
 		var nNodes uint16
-		var ipAddrs [][4]byte
+		var names []string
 		var ports []uint16
 		var bitfields [][]uint16
 
 		t.nodes.ForEach(func(node *NodeInfo) {
 			if file, exists := node.files.Get(packet.FileName); exists {
 				nNodes++
-				ipAddrs = append(ipAddrs, utils.TCPAddrToBytes(node.conn.RemoteAddr()))
+				names = append(names, node.domain)
 				ports = append(ports, uint16(node.udpPort))
 				bitfields = append(bitfields, file.Bitfield)
 			}
@@ -66,7 +65,7 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 		file, _ := t.files.Get(packet.FileName)
 
 		// Send file name, hash and chunks hashes
-		anPacket := protocol.NewAnswerNodesPacket(file.FileName, file.FileSize, file.FileHash, file.ChunkHashes, nNodes, ipAddrs, ports, bitfields)
+		anPacket := protocol.NewAnswerNodesPacket(file.FileName, file.FileSize, file.FileHash, file.ChunkHashes, nNodes, names, ports, bitfields)
 		conn.EnqueuePacket(&anPacket)
 	} else {
 		fmt.Printf("File %s requested from %s does not exist\n", packet.FileName, conn.RemoteAddr())

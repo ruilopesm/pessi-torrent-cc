@@ -45,6 +45,15 @@ func (n *Node) requestFileByChunks(packet *protocol.AnswerNodesPacket, forDownlo
 	// Loop over nodes who have the file and request missing chunks
 	for _, node := range packet.Nodes {
 		missingChunksInNode := make([]uint16, 0)
+		nodeAddrStr, err := n.dns.ResolveIP(node.Name)
+		nodeAddr := net.ParseIP(nodeAddrStr)
+		fmt.Println("Node name: ", node.Name)
+		fmt.Println("Node addr: ", nodeAddr)
+
+		if err != nil {
+			fmt.Printf("Error resolving node IP: %v\n", err)
+			continue
+		}
 
 		for _, chunk := range missingChunks {
 			if protocol.GetBit(node.Bitfield, int(chunk)) {
@@ -54,7 +63,7 @@ func (n *Node) requestFileByChunks(packet *protocol.AnswerNodesPacket, forDownlo
 
 		if len(missingChunksInNode) > 0 {
 			udpAddr := &net.UDPAddr{
-				IP:   node.IPAddr[:],
+				IP:   nodeAddr,
 				Port: int(node.Port),
 			}
 

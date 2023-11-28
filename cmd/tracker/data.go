@@ -23,6 +23,7 @@ func NewTrackedFile(fileName string, fileSize uint64, fileHash [20]byte, chunkHa
 }
 
 type NodeInfo struct {
+	domain  string
 	conn    transport.TCPConnection
 	udpPort uint16
 
@@ -37,8 +38,9 @@ type SharedFile struct {
 	Bitfield    []uint16
 }
 
-func NewNodeInfo(conn transport.TCPConnection, udpPort uint16) NodeInfo {
+func NewNodeInfo(conn transport.TCPConnection, udpPort uint16, domain string) NodeInfo {
 	return NodeInfo{
+		domain:  domain,
 		conn:    conn,
 		udpPort: udpPort,
 		files:   structures.NewSynchronizedMap[*SharedFile](),

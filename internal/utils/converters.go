@@ -30,3 +30,13 @@ func StrToUDPPort(port string) (uint16, error) {
 
 	return uint16(udpPort), nil
 }
+
+func StrToUDPAddr(addr string) ([4]byte, error) {
+	ip, err := net.ResolveUDPAddr("udp", addr)
+	if err != nil {
+		var zero [4]byte
+		return zero, err
+	}
+
+	return UDPAddrToBytes(ip), nil
+}

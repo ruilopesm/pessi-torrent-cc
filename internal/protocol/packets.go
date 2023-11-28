@@ -3,13 +3,13 @@ package protocol
 // NODE -> TRACKER
 
 type InitPacket struct {
-	IPAddr  [4]byte
+	Name    string
 	UDPPort uint16
 }
 
-func NewInitPacket(ipAddr [4]byte, udpPort uint16) InitPacket {
+func NewInitPacket(name string, udpPort uint16) InitPacket {
 	return InitPacket{
-		IPAddr:  ipAddr,
+		Name:    name,
 		UDPPort: udpPort,
 	}
 }
@@ -127,13 +127,13 @@ type AnswerNodesPacket struct {
 }
 
 type NodeFileInfo struct {
-	IPAddr       [4]byte
+	Name         string
 	Port         uint16
 	BitfieldSize uint16
 	Bitfield     []uint8
 }
 
-func NewAnswerNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte, nNodes uint16, ipAddrs [][4]byte, ports []uint16, bitfields [][]uint16) AnswerNodesPacket {
+func NewAnswerNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte, nNodes uint16, names []string, ports []uint16, bitfields [][]uint16) AnswerNodesPacket {
 	an := AnswerNodesPacket{
 		FileName:      fileName,
 		FileSize:      fileSize,
@@ -147,7 +147,7 @@ func NewAnswerNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, c
 
 		node := NodeFileInfo{
 			BitfieldSize: uint16(len(bitfield)),
-			IPAddr:       ipAddrs[i],
+			Name:         names[i],
 			Port:         ports[i],
 			Bitfield:     bitfield,
 		}

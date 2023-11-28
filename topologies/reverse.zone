@@ -1,0 +1,20 @@
+$ORIGIN 10.in-addr.arpa.
+$TTL 1d
+@       IN SOA  servidor2.local. admin.local. (
+                2023012301 ; serial
+                8h         ; refresh
+                2h         ; retry
+                4w         ; expire
+                1h         ; minimum
+              )
+@       IN NS   servidor2.local.
+
+; Define PTR records for reverse DNS
+1.1.1       IN PTR  portatil1.local.
+2.1.1       IN PTR  portatil2.local.
+1.2.2       IN PTR  pc1.local.
+2.2.2       IN PTR  pc2.local.
+1.3.3       IN PTR  roma.local.
+2.3.3       IN PTR  paris.local.
+1.4.4       IN PTR  servidor1.local.
+2.4.4       IN PTR  servidor2.local.
