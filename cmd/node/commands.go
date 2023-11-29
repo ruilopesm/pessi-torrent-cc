@@ -21,7 +21,7 @@ func (n *Node) requestFile(args []string) error {
 	return nil
 }
 
-// publish <path>
+// publish <file name>
 func (n *Node) publish(args []string) error {
 	path := args[0]
 
@@ -96,9 +96,7 @@ func (n *Node) publishDirectory(path string) error {
 
 // status
 func (n *Node) status(_ []string) error {
-	logger.Info("Currently connected to tracker with address %s", n.serverAddr)
-
-	logger.Info("")
+	logger.Info("Currently connected to tracker with address %s", n.trackerAddr)
 
 	if n.pending.Len() != 0 {
 		logger.Info("Pending files:")

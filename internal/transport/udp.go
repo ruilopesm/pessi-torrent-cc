@@ -12,7 +12,7 @@ const (
 	UDPMaxPacketSize = 65515 // 65535 - 20 (UDP header)
 )
 
-type UDPPacketHandler func(packet interface{}, addr *net.UDPAddr)
+type UDPPacketHandler func(packet protocol.Packet, addr *net.UDPAddr)
 
 type UDPServer struct {
 	connection   net.UDPConn

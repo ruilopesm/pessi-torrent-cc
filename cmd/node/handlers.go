@@ -12,6 +12,30 @@ import (
 	"time"
 )
 
+func (n *Node) HandlePackets(packet protocol.Packet, conn *transport.TCPConnection) {
+	switch packet := packet.(type) {
+	case *protocol.AnswerNodesPacket:
+		n.handleAnswerNodesPacket(packet, conn)
+	case *protocol.PublishFileSuccessPacket:
+		n.handlePublishFileSuccessPacket(packet, conn)
+	case *protocol.AlreadyExistsPacket:
+		n.handleAlreadyExistsPacket(packet, conn)
+	case *protocol.NotFoundPacket:
+		n.handleNotFoundPacket(packet, conn)
+	default:
+		logger.Warn("Unknown packet type: %v", packet)
+	}
+}
+
+func (n *Node) HandleUDPPackets(packet protocol.Packet, addr *net.UDPAddr) {
+	switch data := packet.(type) {
+	case *protocol.RequestChunksPacket:
+		n.handleRequestChunksPacket(packet.(*protocol.RequestChunksPacket), addr)
+	default:
+		logger.Warn("Unknown packet type: %v", data)
+	}
+}
+
 // Handler for when a node requests, to the tracker, the list of nodes who have a specific file
 func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn *transport.TCPConnection) {
 	logger.Info("Answer nodes packet received from %s", conn.RemoteAddr())

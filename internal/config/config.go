@@ -1,46 +1,42 @@
 package config
 
 import (
-	"gopkg.in/yaml.v3"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
-	ConfigPath = "./config/config.yml"
+	DefaultConfigPath = "config/config.yml"
 )
 
+// Struct used by the YAML parser to parse the config file
 type Config struct {
 	DNS struct {
 		Host string `yaml:"host"`
-		Port int    `yaml:"port"`
+		Port uint   `yaml:"port"`
 	} `yaml:"dns"`
 
 	Tracker struct {
 		Host string `yaml:"host"`
-		Port int    `yaml:"port"`
+		Port uint   `yaml:"port"`
 	} `yaml:"tracker"`
 
 	Node struct {
-		Port int `yaml:"port"`
+		Port uint `yaml:"port"`
 	} `yaml:"node"`
 }
 
-// NewConfig returns a new decoded Config struct
 func NewConfig(configPath string) (*Config, error) {
-	// Create config structure
 	config := &Config{}
 
-	// Open config file
 	file, err := os.Open(configPath)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	// Init new YAML decode
 	d := yaml.NewDecoder(file)
-
-	// Start YAML decoding from file
 	if err := d.Decode(&config); err != nil {
 		return nil, err
 	}

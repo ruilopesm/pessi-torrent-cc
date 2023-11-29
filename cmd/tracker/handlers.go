@@ -7,6 +7,21 @@ import (
 	"PessiTorrent/internal/utils"
 )
 
+func (t *Tracker) HandlePackets(packet protocol.Packet, conn *transport.TCPConnection) {
+	switch packet := packet.(type) {
+	case *protocol.InitPacket:
+		t.handleInitPacket(packet, conn)
+	case *protocol.PublishFilePacket:
+		t.handlePublishFilePacket(packet, conn)
+	case *protocol.RequestFilePacket:
+		t.handleRequestFilePacket(packet, conn)
+	case *protocol.RemoveFilePacket:
+		t.handleRemoveFilePacket(packet, conn)
+	default:
+		logger.Error("Unknown packet type received from %s", conn.RemoteAddr())
+	}
+}
+
 func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *transport.TCPConnection) {
 	logger.Info("Init packet received from %s", conn.RemoteAddr())
 

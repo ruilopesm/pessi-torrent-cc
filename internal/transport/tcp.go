@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-type TCPPacketHandler func(packet interface{}, conn *TCPConnection)
+type TCPPacketHandler func(packet protocol.Packet, conn *TCPConnection)
 
 type TCPConnection struct {
 	connection   net.Conn
