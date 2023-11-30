@@ -43,9 +43,6 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 		return
 	}
 
-	logger.Info("Number of nodes who have file %s: %d", packet.FileName, len(packet.Nodes))
-	logger.Info("Number of chunks of file %s: %d", packet.FileName, len(packet.ChunkHashes))
-
 	forDownloadFile.SetData(packet.FileHash, packet.ChunkHashes, packet.FileSize, uint16(len(packet.ChunkHashes)))
 
 	for _, node := range packet.Nodes {

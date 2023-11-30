@@ -120,7 +120,7 @@ func (n *Node) status(_ []string) error {
 		logger.Info("Files for download:")
 		n.forDownload.ForEach(func(fileName string, file *ForDownloadFile) {
 			logger.Info("%s with size %d", fileName, file.FileSize)
-			logger.Info("Chunks %d/%d", file.Chunks.Len(), file.NumberOfChunks)
+			logger.Info("Chunks %d/%d", file.LengthOfMissingChunks(), file.NumberOfChunks)
 		})
 	}
 

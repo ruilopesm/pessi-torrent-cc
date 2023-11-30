@@ -51,7 +51,7 @@ func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fil
 	f.NumberOfChunks = numberOfChunks
 	f.Chunks = structures.NewSynchronizedListWithInitialSize[ChunkInfo](uint(numberOfChunks))
 	for i := 0; i < int(numberOfChunks); i++ {
-		f.Chunks.Add(ChunkInfo{
+		_ = f.Chunks.Set(uint(i), ChunkInfo{
 			Index:      uint16(i),
 			Downloaded: false,
 			Hash:       chunkHashes[i],
@@ -66,10 +66,9 @@ func (f *ForDownloadFile) AddNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
 		Chunks: structures.NewSynchronizedMap[uint16, time.Time](),
 	}
 
-	for i := 0; i < len(bitfield); i++ {
-		if protocol.GetBit(bitfield, i) {
-			nodeInfo.Chunks.Put(uint16(i), time.Time{})
-		}
+	decoded := protocol.DecodeBitField(bitfield)
+	for _, chunkIndex := range decoded {
+		nodeInfo.Chunks.Put(chunkIndex, time.Now())
 	}
 
 	f.Nodes.Put(nodeAddr, &nodeInfo)
@@ -101,4 +100,8 @@ func (f *ForDownloadFile) GetMissingChunks() []uint {
 	})
 
 	return missingChunks
+}
+
+func (f *ForDownloadFile) LengthOfMissingChunks() int {
+	return len(f.GetMissingChunks())
 }
