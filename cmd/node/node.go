@@ -5,6 +5,7 @@ import (
 	"PessiTorrent/internal/logger"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
+	"PessiTorrent/internal/ticker"
 	"PessiTorrent/internal/transport"
 	"PessiTorrent/internal/utils"
 	"net"
@@ -17,10 +18,11 @@ type Node struct {
 
 	conn transport.TCPConnection
 	srv  transport.UDPServer
+	tck  ticker.Ticker
 
-	published   structures.SynchronizedMap[*File]
-	pending     structures.SynchronizedMap[*File]
-	forDownload structures.SynchronizedMap[*ForDownloadFile]
+	published   structures.SynchronizedMap[string, *File]
+	pending     structures.SynchronizedMap[string, *File]
+	forDownload structures.SynchronizedMap[string, *ForDownloadFile]
 
 	quitChannel chan struct{}
 }
@@ -30,9 +32,9 @@ func NewNode(trackerAddr string, udpPort uint16) Node {
 		trackerAddr: trackerAddr,
 		udpPort:     udpPort,
 
-		pending:     structures.NewSynchronizedMap[*File](),
-		published:   structures.NewSynchronizedMap[*File](),
-		forDownload: structures.NewSynchronizedMap[*ForDownloadFile](),
+		pending:     structures.NewSynchronizedMap[string, *File](),
+		published:   structures.NewSynchronizedMap[string, *File](),
+		forDownload: structures.NewSynchronizedMap[string, *ForDownloadFile](),
 
 		quitChannel: make(chan struct{}),
 	}
@@ -43,6 +45,7 @@ func (n *Node) Start() {
 	go n.startUDP()
 	go n.startCLI()
 	go n.notifyTracker()
+	go n.startTicker()
 
 	<-n.quitChannel
 }
@@ -50,7 +53,7 @@ func (n *Node) Start() {
 func (n *Node) startTCP() {
 	conn, err := net.Dial("tcp4", n.trackerAddr)
 	if err != nil {
-		logger.Error("Failed to connect to tracker: %s", err)
+		logger.Error("Tracker is not yet ready: %s", err)
 		return
 	}
 
@@ -102,8 +105,35 @@ func (n *Node) notifyTracker() {
 	n.conn.EnqueuePacket(&packet)
 }
 
+func (n *Node) startTicker() {
+	tck := ticker.NewTicker(n.tick)
+	tck.Start()
+	n.tck = tck
+}
+
+func (n *Node) tick() {
+	n.forDownload.ForEach(func(fileName string, file *ForDownloadFile) {
+		missingChunks := file.GetMissingChunks()
+
+		file.Nodes.ForEach(func(nodeAddr *net.UDPAddr, node *NodeInfo) {
+			missingChunksPerNode := make([]uint16, 0)
+			for _, chunkIndex := range missingChunks {
+				if _, ok := node.Chunks.Get(uint16(chunkIndex)); ok {
+					logger.Info("Node %s has chunk %d", nodeAddr, chunkIndex)
+					missingChunksPerNode = append(missingChunksPerNode, uint16(chunkIndex))
+				}
+			}
+
+			if len(missingChunksPerNode) > 0 {
+				logger.Info("Requesting %d chunks from %s", len(missingChunksPerNode), nodeAddr)
+			}
+		})
+	})
+}
+
 func (n *Node) Stop() {
 	n.srv.Stop()
+	n.tck.Stop()
 	n.quitChannel <- struct{}{}
 	close(n.quitChannel)
 }

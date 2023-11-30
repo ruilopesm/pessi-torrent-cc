@@ -55,6 +55,10 @@ func HashFileChunks(file *os.File, dest *[][20]byte) (uint64, error) {
 	return fileSize, nil
 }
 
+func HashChunk(chunk []byte) [20]byte {
+	return sha1.Sum(chunk)
+}
+
 // FileSize -> bytes
 // ChunkSize -> bytes
 func ChunkSize(fileSize uint64) uint64 {

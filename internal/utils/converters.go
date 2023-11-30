@@ -30,3 +30,10 @@ func StrToUDPPort(port string) (uint16, error) {
 
 	return uint16(udpPort), nil
 }
+
+func BytesAndPortToUDPAddr(ip [4]byte, port uint16) *net.UDPAddr {
+	return &net.UDPAddr{
+		IP:   ip[:],
+		Port: int(port),
+	}
+}

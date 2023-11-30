@@ -11,7 +11,7 @@ type Tracker struct {
 	tcpPort  uint16
 	listener net.Listener
 
-	files structures.SynchronizedMap[*TrackedFile]
+	files structures.SynchronizedMap[string, *TrackedFile]
 	nodes structures.SynchronizedList[*NodeInfo]
 
 	quitChannel chan struct{}
@@ -20,7 +20,7 @@ type Tracker struct {
 func NewTracker(port uint16) Tracker {
 	return Tracker{
 		tcpPort: port,
-		files:   structures.NewSynchronizedMap[*TrackedFile](),
+		files:   structures.NewSynchronizedMap[string, *TrackedFile](),
 		nodes:   structures.NewSynchronizedList[*NodeInfo](),
 
 		quitChannel: make(chan struct{}),
@@ -33,6 +33,11 @@ func (t *Tracker) Start() {
 	<-t.quitChannel
 }
 
+func (t *Tracker) Stop() {
+	t.quitChannel <- struct{}{}
+	close(t.quitChannel)
+}
+
 func (t *Tracker) startTCP() {
 	tcpAddr := net.TCPAddr{
 		IP:   net.IPv4zero,
@@ -42,6 +47,7 @@ func (t *Tracker) startTCP() {
 	listener, err := net.Listen("tcp4", tcpAddr.String())
 	if err != nil {
 		logger.Error("Failed to start TCP server: %s", err)
+		t.Stop()
 		return
 	}
 

@@ -115,14 +115,14 @@ func (c *CLI) Start() {
 		if cmd, ok := c.commands[parts[0]]; ok {
 			args := parts[1:]
 			if len(args) != cmd.NumberOfArgs {
-				logger.Warn("Wrong number of arguments for %s", cmd.Name)
-				logger.Warn("Usage: %s %s", cmd.Name, cmd.Usage)
+				logger.Warn("Wrong number of arguments for %s.", cmd.Name)
+				logger.Warn("Usage: %s %s.", cmd.Name, cmd.Usage)
 				continue
 			}
 
 			err := cmd.Execute(args)
 			if err != nil {
-				logger.Warn("Error executing command %s: %s", cmd.Name, err)
+				logger.Warn("Error executing command %s: %s.", cmd.Name, err)
 			}
 		} else if parts[0] == "exit" {
 			c.shutdownHook()
@@ -130,7 +130,7 @@ func (c *CLI) Start() {
 		} else if parts[0] == "help" {
 			c.help()
 		} else {
-			logger.Info("Unknown command %s", parts[0])
+			logger.Info("Unknown command %s.", parts[0])
 			c.help()
 			continue
 		}

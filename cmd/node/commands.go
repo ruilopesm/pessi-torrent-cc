@@ -15,8 +15,8 @@ func (n *Node) requestFile(args []string) error {
 	packet := protocol.NewRequestFilePacket(filename)
 	n.conn.EnqueuePacket(&packet)
 
-	forDownloadFile := NewForDownloadFile(filename)
-	n.forDownload.Put(filename, &forDownloadFile)
+	// Data of the file will be updated later, when the tracker responds back
+	n.forDownload.Put(filename, &ForDownloadFile{})
 
 	return nil
 }
@@ -96,15 +96,17 @@ func (n *Node) publishDirectory(path string) error {
 
 // status
 func (n *Node) status(_ []string) error {
-	logger.Info("Currently connected to tracker with address %s", n.trackerAddr)
+	if n.connected {
+		logger.Info("Connected to tracker on %s", n.trackerAddr)
+	} else {
+		logger.Info("Not connected to tracker. Run 'connect' in order to do so")
+	}
 
 	if n.pending.Len() != 0 {
 		logger.Info("Pending files:")
 		n.pending.ForEach(func(filename string, file *File) {
 			logger.Info("%s at %s", file.FileName, file.Path)
 		})
-
-		logger.Info("")
 	}
 
 	if n.published.Len() != 0 {
@@ -112,15 +114,13 @@ func (n *Node) status(_ []string) error {
 		n.published.ForEach(func(filename string, file *File) {
 			logger.Info("%s at %s", file.FileName, file.Path)
 		})
-
-		logger.Info("")
 	}
 
 	if n.forDownload.Len() != 0 {
 		logger.Info("Files for download:")
-		n.forDownload.ForEach(func(filename string, file *ForDownloadFile) {
-			logger.Info("%s with size %d", file.FileName, file.FileSize)
-			logger.Info("Chunks %d/%d", file.DownloadedChunks.Len(), len(file.ChunkHashes))
+		n.forDownload.ForEach(func(fileName string, file *ForDownloadFile) {
+			logger.Info("%s with size %d", fileName, file.FileSize)
+			logger.Info("Chunks %d/%d", file.Chunks.Len(), file.NumberOfChunks)
 		})
 	}
 
