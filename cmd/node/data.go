@@ -12,6 +12,7 @@ import (
 
 const (
 	DownloadsFolder = "downloads"
+	ChunkTimeout    = 3 * time.Second
 )
 
 type File struct {
@@ -120,7 +121,7 @@ func (n *NodeInfo) ShouldRequestChunk(chunkIndex uint16) bool {
 	}
 
 	// Chunk was not requested yet or it was requested more than 3 seconds ago
-	return chunk == time.Time{} || time.Since(chunk) > 3*time.Second
+	return chunk == time.Time{} || time.Since(chunk) > ChunkTimeout
 }
 
 func (f *ForDownloadFile) SaveChunkToDisk(fileName string, chunkIndex uint16, chunkContent []uint8) {
