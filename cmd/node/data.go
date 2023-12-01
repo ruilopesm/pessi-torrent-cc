@@ -1,11 +1,18 @@
 package main
 
 import (
+	"PessiTorrent/internal/logger"
+	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
+	"PessiTorrent/internal/utils"
+	"net"
+	"os"
+	"time"
 )
 
 const (
 	DownloadsFolder = "downloads"
+	ChunkTimeout    = 3 * time.Second
 )
 
 type File struct {
@@ -21,39 +28,115 @@ func NewFile(fileName string, path string) File {
 }
 
 type ForDownloadFile struct {
-	FileName string
+	FileHash [20]byte
+	FileSize uint64
 
-	FileHash    [20]byte
-	ChunkHashes [][20]byte
-	FileSize    uint64
+	NumberOfChunks uint16
+	Chunks         structures.SynchronizedList[ChunkInfo]
 
-	// Represents the chunks that have been downloaded
-	DownloadedChunks structures.SynchronizedList[bool]
+	Nodes structures.SynchronizedMap[*net.UDPAddr, *NodeInfo]
 }
 
-func NewForDownloadFile(fileName string) ForDownloadFile {
-	return ForDownloadFile{
-		FileName: fileName,
-	}
+type ChunkInfo struct {
+	Index      uint16
+	Downloaded bool
+	Hash       [20]byte
+}
+
+type NodeInfo struct {
+	// Chunk index -> Last time chunk was requested
+	Chunks structures.SynchronizedMap[uint16, time.Time]
 }
 
 func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fileSize uint64, numberOfChunks uint16) {
 	f.FileHash = fileHash
-	f.ChunkHashes = chunkHashes
 	f.FileSize = fileSize
 
-	f.DownloadedChunks = structures.NewSynchronizedListWithInitialSize[bool](uint(numberOfChunks))
+	f.NumberOfChunks = numberOfChunks
+	f.Chunks = structures.NewSynchronizedListWithInitialSize[ChunkInfo](uint(numberOfChunks))
+	for i := 0; i < int(numberOfChunks); i++ {
+		_ = f.Chunks.Set(uint(i), ChunkInfo{
+			Index:      uint16(i),
+			Downloaded: false,
+			Hash:       chunkHashes[i],
+		})
+	}
+
+	f.Nodes = structures.NewSynchronizedMap[*net.UDPAddr, *NodeInfo]()
 }
 
-func (f *ForDownloadFile) SetDownloadedChunk(chunk uint16) {
-	_ = f.DownloadedChunks.Set(uint(chunk), true)
+func (f *ForDownloadFile) IsFileDownloaded() bool {
+	return f.LengthOfMissingChunks() == 0
 }
 
-// Returns a list of the chunks that were not yet downloaded
+func (f *ForDownloadFile) AddNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
+	nodeInfo := NodeInfo{
+		Chunks: structures.NewSynchronizedMap[uint16, time.Time](),
+	}
+
+	decoded := protocol.DecodeBitField(bitfield)
+	for _, chunkIndex := range decoded {
+		nodeInfo.Chunks.Put(chunkIndex, time.Time{})
+	}
+
+	f.Nodes.Put(nodeAddr, &nodeInfo)
+}
+
+func (f *ForDownloadFile) MarkChunkAsRequested(chunkIndex uint16, nodeInfo *NodeInfo) {
+	nodeInfo.Chunks.Put(chunkIndex, time.Now())
+}
+
+func (f *ForDownloadFile) MarkChunkAsDownloaded(chunkIndex uint16) {
+	chunk, _ := f.Chunks.Get(uint(chunkIndex))
+	chunk.Downloaded = true
+	_ = f.Chunks.Set(uint(chunkIndex), chunk)
+}
+
+func (f *ForDownloadFile) ChunkAlreadyDownloaded(chunkIndex uint16) bool {
+	chunk, _ := f.Chunks.Get(uint(chunkIndex))
+	return chunk.Downloaded
+}
+
+func (f *ForDownloadFile) GetChunkHash(chunkIndex uint16) [20]byte {
+	chunk, _ := f.Chunks.Get(uint(chunkIndex))
+	return chunk.Hash
+}
+
 func (f *ForDownloadFile) GetMissingChunks() []uint {
-	chunks := f.DownloadedChunks.IndexesWhere(func(val bool) bool {
-		return !val
+	missingChunks := f.Chunks.IndexesWhere(func(chunk ChunkInfo) bool {
+		return !chunk.Downloaded
 	})
 
-	return chunks
+	return missingChunks
+}
+
+func (f *ForDownloadFile) LengthOfMissingChunks() int {
+	return len(f.GetMissingChunks())
+}
+
+func (n *NodeInfo) ShouldRequestChunk(chunkIndex uint16) bool {
+	chunk, ok := n.Chunks.Get(chunkIndex)
+	if !ok {
+		return false
+	}
+
+	// Chunk was not requested yet or it was requested more than 3 seconds ago
+	return chunk == time.Time{} || time.Since(chunk) > ChunkTimeout
+}
+
+func (f *ForDownloadFile) SaveChunkToDisk(fileName string, chunkIndex uint16, chunkContent []uint8) {
+	path := DownloadsFolder + "/" + fileName
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		logger.Error("Error opening file:", err)
+		return
+	}
+	defer file.Close()
+
+	chunkSize := utils.ChunkSize(uint64(f.FileSize))
+	_, err = file.WriteAt(chunkContent, int64(uint64(chunkIndex)*chunkSize))
+	if err != nil {
+		logger.Error("Error writing chunk to file:", err)
+		return
+	}
 }

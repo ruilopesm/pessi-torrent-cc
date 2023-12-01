@@ -1,10 +1,10 @@
 package transport
 
 import (
+	"PessiTorrent/internal/logger"
 	"PessiTorrent/internal/protocol"
 	"bytes"
 	"errors"
-	"fmt"
 	"net"
 )
 
@@ -12,30 +12,59 @@ const (
 	UDPMaxPacketSize = 65515 // 65535 - 20 (UDP header)
 )
 
-type UDPPacketHandler func(packet interface{}, addr *net.UDPAddr)
+type UDPPacketHandler func(packet protocol.Packet, addr *net.UDPAddr)
 
 type UDPServer struct {
-	connection   net.UDPConn
-	readBuffer   []byte
-	handlePacket UDPPacketHandler
-	onClose      func()
+	connection    net.UDPConn
+	readBuffer    []byte
+	requestsQueue chan RequestChunk
+	handlePacket  UDPPacketHandler
+	onClose       func()
+}
+
+type RequestChunk struct {
+	packet protocol.Packet
+	addr   *net.UDPAddr
 }
 
 func NewUDPServer(conn net.UDPConn, handlePacket UDPPacketHandler, onClose func()) UDPServer {
 	return UDPServer{
 		conn,
 		make([]byte, UDPMaxPacketSize),
+		make(chan RequestChunk),
 		handlePacket,
 		onClose,
 	}
 }
 
 func (srv *UDPServer) Start() {
+	go srv.writeLoop()
 	go srv.readLoop()
 }
 
 func (srv *UDPServer) Stop() {
 	srv.connection.Close()
+}
+
+func (srv *UDPServer) writeLoop() {
+	for {
+		request := <-srv.requestsQueue
+		if request.packet == nil {
+			return
+		}
+
+		buffer := new(bytes.Buffer)
+		err := protocol.SerializePacket(buffer, request.packet)
+		if err != nil {
+			logger.Error("Error serializing packet:", err)
+			continue
+		}
+
+		_, err = srv.connection.WriteToUDP(buffer.Bytes(), request.addr)
+		if err != nil {
+			logger.Error("Error sending packet:", err)
+		}
+	}
 }
 
 func (srv *UDPServer) readLoop() {
@@ -46,13 +75,13 @@ func (srv *UDPServer) readLoop() {
 				srv.onClose()
 				break
 			}
-			fmt.Println("Error reading from UDP connection:", err)
+			logger.Error("Error reading from UDP connection:", err)
 			continue
 		}
 
 		packet, err := protocol.DeserializePacket(bytes.NewReader(srv.readBuffer[:n]))
 		if err != nil {
-			fmt.Println("Error deserializing packet:", err)
+			logger.Error("Error deserializing packet:", err)
 			continue
 		}
 
@@ -64,53 +93,16 @@ func (srv *UDPServer) SendPacket(packet protocol.Packet, addr *net.UDPAddr) {
 	buffer := new(bytes.Buffer)
 	err := protocol.SerializePacket(buffer, packet)
 	if err != nil {
-		fmt.Println("Error serializing packet:", err)
+		logger.Error("Error serializing packet:", err)
 		return
 	}
 
 	_, err = srv.connection.WriteToUDP(buffer.Bytes(), addr)
 	if err != nil {
-		fmt.Println("Error sending packet:", err)
+		logger.Error("Error sending packet:", err)
 	}
 }
 
-type UDPSocket struct {
-	connection net.UDPConn
-	toSend     net.UDPAddr
-}
-
-func NewUDPSocket(conn net.UDPConn, toSend net.UDPAddr) UDPSocket {
-	return UDPSocket{
-		conn,
-		toSend,
-	}
-}
-
-func (sock *UDPSocket) SendPacket(packet protocol.Packet) {
-	buffer := new(bytes.Buffer)
-	err := protocol.SerializePacket(buffer, packet)
-	if err != nil {
-		fmt.Println("Error serializing packet:", err)
-		return
-	}
-
-	_, err = sock.connection.WriteToUDP(buffer.Bytes(), &sock.toSend)
-	if err != nil {
-		fmt.Println("Error sending packet:", err)
-	}
-}
-
-func (sock *UDPSocket) ReadPacket() (protocol.Packet, error) {
-	buffer := make([]byte, UDPMaxPacketSize)
-	n, _, err := sock.connection.ReadFromUDP(buffer)
-	if err != nil {
-		return nil, err
-	}
-
-	packet, err := protocol.DeserializePacket(bytes.NewReader(buffer[:n]))
-	if err != nil {
-		return nil, err
-	}
-
-	return packet, nil
+func (srv *UDPServer) EnqueueRequest(packet protocol.Packet, addr *net.UDPAddr) {
+	srv.requestsQueue <- RequestChunk{packet, addr}
 }

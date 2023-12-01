@@ -26,7 +26,7 @@ type NodeInfo struct {
 	conn    transport.TCPConnection
 	udpPort uint16
 
-	files structures.SynchronizedMap[*SharedFile]
+	files structures.SynchronizedMap[string, *SharedFile]
 }
 
 type SharedFile struct {
@@ -41,7 +41,7 @@ func NewNodeInfo(conn transport.TCPConnection, udpPort uint16) NodeInfo {
 	return NodeInfo{
 		conn:    conn,
 		udpPort: udpPort,
-		files:   structures.NewSynchronizedMap[*SharedFile](),
+		files:   structures.NewSynchronizedMap[string, *SharedFile](),
 	}
 }
 

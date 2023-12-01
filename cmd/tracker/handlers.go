@@ -7,6 +7,21 @@ import (
 	"PessiTorrent/internal/utils"
 )
 
+func (t *Tracker) HandlePackets(packet protocol.Packet, conn *transport.TCPConnection) {
+	switch packet := packet.(type) {
+	case *protocol.InitPacket:
+		t.handleInitPacket(packet, conn)
+	case *protocol.PublishFilePacket:
+		t.handlePublishFilePacket(packet, conn)
+	case *protocol.RequestFilePacket:
+		t.handleRequestFilePacket(packet, conn)
+	case *protocol.RemoveFilePacket:
+		t.handleRemoveFilePacket(packet, conn)
+	default:
+		logger.Error("Unknown packet type received from %s", conn.RemoteAddr())
+	}
+}
+
 func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *transport.TCPConnection) {
 	logger.Info("Init packet received from %s", conn.RemoteAddr())
 
@@ -35,8 +50,8 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 	// Add file to the node's list of files
 	t.nodes.ForEach(func(node *NodeInfo) {
 		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-			newSharedFile := NewSharedFile(packet.FileName, packet.FileSize, packet.FileHash, packet.ChunkHashes)
-			node.AddFile(newSharedFile)
+			sharedFile := NewSharedFile(packet.FileName, packet.FileSize, packet.FileHash, packet.ChunkHashes)
+			node.files.Put(packet.FileName, &sharedFile)
 		}
 	})
 
@@ -48,7 +63,7 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, conn *transport.TCPConnection) {
 	logger.Info("Request file packet received from %s", conn.RemoteAddr())
 
-	if t.files.Contains(packet.FileName) {
+	if file, ok := t.files.Get(packet.FileName); ok {
 		var nNodes uint16
 		var ipAddrs [][4]byte
 		var ports []uint16
@@ -62,8 +77,6 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 				bitfields = append(bitfields, file.Bitfield)
 			}
 		})
-
-		file, _ := t.files.Get(packet.FileName)
 
 		// Send file name, hash and chunks hashes
 		anPacket := protocol.NewAnswerNodesPacket(file.FileName, file.FileSize, file.FileHash, file.ChunkHashes, nNodes, ipAddrs, ports, bitfields)

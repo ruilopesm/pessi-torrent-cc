@@ -5,29 +5,28 @@ import (
 	"PessiTorrent/internal/protocol"
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"strings"
 )
 
-type TCPPacketHandler func(packet interface{}, conn *TCPConnection)
+type TCPPacketHandler func(packet protocol.Packet, conn *TCPConnection)
 
 type TCPConnection struct {
 	connection   net.Conn
 	readWrite    bufio.ReadWriter
 	writeQueue   chan protocol.Packet
 	handlePacket TCPPacketHandler
-	onQuit       func()
+	onClose      func()
 }
 
-func NewTCPConnection(conn net.Conn, handlePacket TCPPacketHandler, onQuit func()) TCPConnection {
+func NewTCPConnection(conn net.Conn, handlePacket TCPPacketHandler, onClose func()) TCPConnection {
 	return TCPConnection{
 		conn,
 		*bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)),
 		make(chan protocol.Packet),
 		handlePacket,
-		onQuit,
+		onClose,
 	}
 }
 
@@ -39,11 +38,11 @@ func (conn *TCPConnection) Start() {
 func (conn *TCPConnection) Stop() {
 	err := conn.connection.Close()
 	if err != nil {
-		fmt.Println("Error closing TCP connection:", err)
+		logger.Error("Error closing TCP connection:", err)
 	}
 
 	close(conn.writeQueue)
-	conn.onQuit()
+	conn.onClose()
 }
 
 func (conn *TCPConnection) writeLoop() {
@@ -55,13 +54,13 @@ func (conn *TCPConnection) writeLoop() {
 
 		err := protocol.SerializePacket(conn.readWrite, packet)
 		if err != nil {
-			fmt.Println("Error serializing packet:", err)
+			logger.Error("Error serializing packet:", err)
 			continue
 		}
 
 		err = conn.readWrite.Flush()
 		if err != nil {
-			fmt.Println("Error flushing buffer:", err)
+			logger.Error("Error flushing buffer:", err)
 			continue
 		}
 	}
@@ -81,7 +80,7 @@ func (conn *TCPConnection) readLoop() {
 				return
 			}
 
-			fmt.Println("Error deserializing packet:", err)
+			logger.Error("Error deserializing packet:", err)
 			continue
 		}
 

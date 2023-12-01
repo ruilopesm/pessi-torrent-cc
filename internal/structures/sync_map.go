@@ -2,16 +2,18 @@ package structures
 
 import "sync"
 
-type SynchronizedMap[V any] struct {
-	M map[string]V
+type SynchronizedMap[K comparable, V any] struct {
+	M map[K]V
 	sync.Mutex
 }
 
-func NewSynchronizedMap[V any]() SynchronizedMap[V] {
-	return SynchronizedMap[V]{M: make(map[string]V)}
+func NewSynchronizedMap[K comparable, V any]() SynchronizedMap[K, V] {
+	return SynchronizedMap[K, V]{
+		M: make(map[K]V),
+	}
 }
 
-func (m *SynchronizedMap[V]) Get(key string) (V, bool) {
+func (m *SynchronizedMap[K, V]) Get(key K) (V, bool) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -19,39 +21,40 @@ func (m *SynchronizedMap[V]) Get(key string) (V, bool) {
 	return val, ok
 }
 
-func (m *SynchronizedMap[V]) Put(key string, val V) {
+func (m *SynchronizedMap[K, V]) Put(key K, val V) {
 	m.Lock()
 	defer m.Unlock()
 
 	m.M[key] = val
 }
 
-func (m *SynchronizedMap[V]) Delete(key string) {
+func (m *SynchronizedMap[K, V]) Delete(key K) {
 	m.Lock()
 	defer m.Unlock()
 
 	delete(m.M, key)
 }
 
-func (m *SynchronizedMap[V]) Len() int {
+func (m *SynchronizedMap[K, V]) Len() int {
 	m.Lock()
 	defer m.Unlock()
 
 	return len(m.M)
 }
 
-func (m *SynchronizedMap[V]) Keys() []string {
+func (m *SynchronizedMap[K, V]) Keys() []K {
 	m.Lock()
 	defer m.Unlock()
 
-	keys := make([]string, 0, len(m.M))
+	keys := make([]K, 0, len(m.M))
 	for k := range m.M {
 		keys = append(keys, k)
 	}
+
 	return keys
 }
 
-func (m *SynchronizedMap[V]) Values() []V {
+func (m *SynchronizedMap[K, V]) Values() []V {
 	m.Lock()
 	defer m.Unlock()
 
@@ -59,10 +62,11 @@ func (m *SynchronizedMap[V]) Values() []V {
 	for _, v := range m.M {
 		values = append(values, v)
 	}
+
 	return values
 }
 
-func (m *SynchronizedMap[V]) Contains(key string) bool {
+func (m *SynchronizedMap[K, V]) Contains(key K) bool {
 	m.Lock()
 	defer m.Unlock()
 
@@ -70,7 +74,7 @@ func (m *SynchronizedMap[V]) Contains(key string) bool {
 	return ok
 }
 
-func (m *SynchronizedMap[V]) ForEach(f func(string, V)) {
+func (m *SynchronizedMap[K, V]) ForEach(f func(K, V)) {
 	m.Lock()
 	defer m.Unlock()
 
