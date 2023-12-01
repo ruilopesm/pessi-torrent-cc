@@ -81,9 +81,8 @@ func (f *ForDownloadFile) AddNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
 	f.Nodes.Put(nodeAddr, &nodeInfo)
 }
 
-func (f *ForDownloadFile) MarkChunkAsRequested(chunkIndex uint16, nodeAddr *net.UDPAddr) {
-	node, _ := f.Nodes.Get(nodeAddr)
-	node.Chunks.Put(chunkIndex, time.Now())
+func (f *ForDownloadFile) MarkChunkAsRequested(chunkIndex uint16, nodeInfo *NodeInfo) {
+	nodeInfo.Chunks.Put(chunkIndex, time.Now())
 }
 
 func (f *ForDownloadFile) MarkChunkAsDownloaded(chunkIndex uint16) {
@@ -120,8 +119,8 @@ func (n *NodeInfo) ShouldRequestChunk(chunkIndex uint16) bool {
 		return false
 	}
 
-	// Chunk was not requested yet or it was requested more than 5 seconds ago
-	return chunk == time.Time{} || time.Since(chunk) > 5*time.Second
+	// Chunk was not requested yet or it was requested more than 3 seconds ago
+	return chunk == time.Time{} || time.Since(chunk) > 3*time.Second
 }
 
 func (f *ForDownloadFile) SaveChunkToDisk(fileName string, chunkIndex uint16, chunkContent []uint8) {

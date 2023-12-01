@@ -109,10 +109,10 @@ func (n *Node) tick() {
 	n.forDownload.ForEach(func(fileName string, file *ForDownloadFile) {
 		missingChunks := file.GetMissingChunks()
 
-		file.Nodes.ForEach(func(nodeAddr *net.UDPAddr, node *NodeInfo) {
+		file.Nodes.ForEach(func(nodeAddr *net.UDPAddr, nodeInfo *NodeInfo) {
 			missingChunksPerNode := make([]uint16, 0)
 			for _, chunk := range missingChunks {
-				if node.ShouldRequestChunk(uint16(chunk)) {
+				if nodeInfo.ShouldRequestChunk(uint16(chunk)) {
 					missingChunksPerNode = append(missingChunksPerNode, uint16(chunk))
 				}
 			}
@@ -121,6 +121,11 @@ func (n *Node) tick() {
 				logger.Info("Requesting %d chunks to %s", len(missingChunksPerNode), nodeAddr)
 				packet := protocol.NewRequestChunksPacket(fileName, missingChunksPerNode)
 				n.srv.EnqueueRequest(&packet, nodeAddr)
+
+				// Mark chunks as requested
+				for _, chunkIndex := range missingChunksPerNode {
+					file.MarkChunkAsRequested(chunkIndex, nodeInfo)
+				}
 			}
 		})
 	})
