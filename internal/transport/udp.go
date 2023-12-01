@@ -103,43 +103,6 @@ func (srv *UDPServer) SendPacket(packet protocol.Packet, addr *net.UDPAddr) {
 	}
 }
 
-type UDPSocket struct {
-	connection net.UDPConn
-	toSend     net.UDPAddr
-}
-
-func NewUDPSocket(conn net.UDPConn, toSend net.UDPAddr) UDPSocket {
-	return UDPSocket{
-		conn,
-		toSend,
-	}
-}
-
-func (sock *UDPSocket) SendPacket(packet protocol.Packet) {
-	buffer := new(bytes.Buffer)
-	err := protocol.SerializePacket(buffer, packet)
-	if err != nil {
-		logger.Error("Error serializing packet:", err)
-		return
-	}
-
-	_, err = sock.connection.WriteToUDP(buffer.Bytes(), &sock.toSend)
-	if err != nil {
-		logger.Error("Error sending packet:", err)
-	}
-}
-
-func (sock *UDPSocket) ReadPacket() (protocol.Packet, error) {
-	buffer := make([]byte, UDPMaxPacketSize)
-	n, _, err := sock.connection.ReadFromUDP(buffer)
-	if err != nil {
-		return nil, err
-	}
-
-	packet, err := protocol.DeserializePacket(bytes.NewReader(buffer[:n]))
-	if err != nil {
-		return nil, err
-	}
-
-	return packet, nil
+func (srv *UDPServer) EnqueueRequest(packet protocol.Packet, addr *net.UDPAddr) {
+	srv.requestsQueue <- RequestChunk{packet, addr}
 }

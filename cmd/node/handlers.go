@@ -5,7 +5,10 @@ import (
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/transport"
 	"PessiTorrent/internal/utils"
+	"errors"
+	"io"
 	"net"
+	"os"
 )
 
 func (n *Node) HandlePackets(packet protocol.Packet, conn *transport.TCPConnection) {
@@ -27,6 +30,8 @@ func (n *Node) HandleUDPPackets(packet protocol.Packet, addr *net.UDPAddr) {
 	switch data := packet.(type) {
 	case *protocol.ChunkPacket:
 		n.handleChunkPacket(data, addr)
+	case *protocol.RequestChunksPacket:
+		n.handleRequestChunksPacket(data, addr)
 	default:
 		logger.Warn("Unknown packet type: %v.", data)
 	}
@@ -103,5 +108,52 @@ func (n *Node) handleChunkPacket(packet *protocol.ChunkPacket, addr *net.UDPAddr
 	// Update chunk info
 	forDownloadFile.MarkChunkAsDownloaded(packet.Chunk)
 
-	logger.Info("Chunk %d of file %s received from %s", packet.Chunk, packet.FileName, addr)
+	// Write chunk to file
+	forDownloadFile.SaveChunkToDisk(packet.FileName, packet.Chunk, packet.ChunkContent)
+	logger.Info("Chunk %d of file %s saved to disk", packet.Chunk, packet.FileName)
+}
+
+func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, addr *net.UDPAddr) {
+	logger.Info("Request chunks packet received from %s", addr)
+
+	// Get file from published files
+	publishedFile, ok := n.published.Get(packet.FileName)
+	if !ok {
+		logger.Warn("File %s not found in published files", packet.FileName)
+		return
+	}
+
+	// Open file by the given path
+	file, err := os.Open(publishedFile.Path)
+	if err != nil {
+		logger.Warn("Error opening file: %v", err)
+		return
+	}
+
+	stats, _ := file.Stat()
+	chunkSize := utils.ChunkSize(uint64(stats.Size()))
+
+	// Send requested chunks
+	for _, chunk := range packet.Chunks {
+		logger.Info("Sending chunk %d of file %s to %s", chunk, packet.FileName, addr)
+
+		// Seek to the beginning of the chunk
+		_, err = file.Seek(int64(uint64(chunk)*chunkSize), 0)
+		if err != nil {
+			logger.Warn("Error seeking file: %v", err)
+			return
+		}
+
+		// Read chunk bytes
+		chunkContent := make([]byte, chunkSize)
+		read, err := file.Read(chunkContent)
+		if err != nil && !errors.Is(err, io.EOF) {
+			logger.Warn("Error reading file: %v", err)
+			return
+		}
+
+		// Send chunk bytes
+		packet := protocol.NewChunkPacket(packet.FileName, chunk, chunkContent[:read])
+		n.srv.SendPacket(&packet, addr)
+	}
 }

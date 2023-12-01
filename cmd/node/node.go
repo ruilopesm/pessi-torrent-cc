@@ -117,15 +117,16 @@ func (n *Node) tick() {
 
 		file.Nodes.ForEach(func(nodeAddr *net.UDPAddr, node *NodeInfo) {
 			missingChunksPerNode := make([]uint16, 0)
-			for _, chunkIndex := range missingChunks {
-				if _, ok := node.Chunks.Get(uint16(chunkIndex)); ok {
-					logger.Info("Node %s has chunk %d", nodeAddr, chunkIndex)
-					missingChunksPerNode = append(missingChunksPerNode, uint16(chunkIndex))
+			for _, chunk := range missingChunks {
+				if node.ShouldRequestChunk(uint16(chunk)) {
+					missingChunksPerNode = append(missingChunksPerNode, uint16(chunk))
 				}
 			}
 
 			if len(missingChunksPerNode) > 0 {
-				logger.Info("Requesting %d chunks from %s", len(missingChunksPerNode), nodeAddr)
+				logger.Info("Requesting %d chunks to %s", len(missingChunksPerNode), nodeAddr)
+				packet := protocol.NewRequestChunksPacket(fileName, missingChunksPerNode)
+				n.srv.EnqueueRequest(&packet, nodeAddr)
 			}
 		})
 	})
