@@ -44,7 +44,6 @@ func (n *Node) Start() {
 	go n.startTCP()
 	go n.startUDP()
 	go n.startCLI()
-	go n.notifyTracker()
 	go n.startTicker()
 
 	<-n.quitChannel
@@ -62,6 +61,11 @@ func (n *Node) startTCP() {
 	go n.conn.Start()
 
 	logger.Info("Connected to tracker on %s", n.trackerAddr)
+
+	// Notify tracker of node's existence
+	ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
+	packet := protocol.NewInitPacket(ipAddr, n.udpPort)
+	n.conn.EnqueuePacket(&packet)
 }
 
 func (n *Node) startUDP() {
@@ -93,16 +97,6 @@ func (n *Node) startCLI() {
 	c.AddCommand("status", "", "Show the status of the node", 0, n.status)
 	c.AddCommand("remove", "<file name>", "", 1, n.removeFile)
 	c.Start()
-}
-
-func (n *Node) notifyTracker() {
-	if !n.connected {
-		return
-	}
-
-	ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
-	packet := protocol.NewInitPacket(ipAddr, n.udpPort)
-	n.conn.EnqueuePacket(&packet)
 }
 
 func (n *Node) startTicker() {

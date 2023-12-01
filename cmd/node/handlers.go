@@ -111,6 +111,11 @@ func (n *Node) handleChunkPacket(packet *protocol.ChunkPacket, addr *net.UDPAddr
 	// Write chunk to file
 	forDownloadFile.SaveChunkToDisk(packet.FileName, packet.Chunk, packet.ChunkContent)
 	logger.Info("Chunk %d of file %s saved to disk", packet.Chunk, packet.FileName)
+
+	if forDownloadFile.IsFileDownloaded() {
+		logger.Info("File %s downloaded successfully", packet.FileName)
+		n.forDownload.Delete(packet.FileName)
+	}
 }
 
 func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, addr *net.UDPAddr) {

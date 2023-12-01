@@ -64,6 +64,10 @@ func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fil
 	f.Nodes = structures.NewSynchronizedMap[*net.UDPAddr, *NodeInfo]()
 }
 
+func (f *ForDownloadFile) IsFileDownloaded() bool {
+	return f.LengthOfMissingChunks() == 0
+}
+
 func (f *ForDownloadFile) AddNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
 	nodeInfo := NodeInfo{
 		Chunks: structures.NewSynchronizedMap[uint16, time.Time](),
