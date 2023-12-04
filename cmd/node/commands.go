@@ -8,6 +8,17 @@ import (
 	"path/filepath"
 )
 
+func (n *Node) connect(args []string) error {
+	if n.connected {
+		logger.Info("Already connected to tracker on %s", n.trackerAddr)
+		return nil
+	}
+
+	go n.startTCP()
+
+	return nil
+}
+
 // request <file name>
 func (n *Node) requestFile(args []string) error {
 	filename := args[0]

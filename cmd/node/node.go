@@ -52,7 +52,7 @@ func (n *Node) Start() {
 func (n *Node) startTCP() {
 	conn, err := net.Dial("tcp4", n.trackerAddr)
 	if err != nil {
-		logger.Error("Tracker is not yet ready: %s", err)
+		logger.Error("No tracker to connect found on %s. Try again later with the 'connect' command", n.trackerAddr)
 		return
 	}
 
@@ -92,6 +92,7 @@ func (n *Node) startCLI() {
 	logger.SetLogger(&console)
 
 	c := cli.NewCLI(n.Stop, console)
+	c.AddCommand("connect", "<tracker address>", "Connect to the tracker", 1, n.connect)
 	c.AddCommand("publish", "<file name>", "", 1, n.publish)
 	c.AddCommand("request", "<file name>", "", 1, n.requestFile)
 	c.AddCommand("status", "", "Show the status of the node", 0, n.status)
