@@ -59,20 +59,6 @@ func (pc *PublishChunkPacket) GetPacketType() uint8 {
 	return PublishChunkType
 }
 
-type PublishFileSuccessPacket struct {
-	FileName string
-}
-
-func NewPublishFileSuccessPacket(fileName string) PublishFileSuccessPacket {
-	return PublishFileSuccessPacket{
-		FileName: fileName,
-	}
-}
-
-func (pfs *PublishFileSuccessPacket) GetPacketType() uint8 {
-	return PublishFileSuccessType
-}
-
 type RequestFilePacket struct {
 	FileName string
 }
@@ -85,6 +71,29 @@ func NewRequestFilePacket(fileName string) RequestFilePacket {
 
 func (rf *RequestFilePacket) GetPacketType() uint8 {
 	return RequestFileType
+}
+
+type FileSuccessPacket struct {
+	FileName string
+	Type     uint8
+}
+
+func NewPublishFileSuccessPacket(fileName string) FileSuccessPacket {
+	return FileSuccessPacket{
+		FileName: fileName,
+		Type:     PublishFileType,
+	}
+}
+
+func NewRemoveFileSuccessPacket(fileName string) FileSuccessPacket {
+	return FileSuccessPacket{
+		FileName: fileName,
+		Type:     RemoveFileType,
+	}
+}
+
+func (fs *FileSuccessPacket) GetPacketType() uint8 {
+	return FileSuccessType
 }
 
 // TRACKER -> NODE

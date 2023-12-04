@@ -15,8 +15,8 @@ func (n *Node) HandlePackets(packet protocol.Packet, conn *transport.TCPConnecti
 	switch packet := packet.(type) {
 	case *protocol.AnswerNodesPacket:
 		n.handleAnswerNodesPacket(packet, conn)
-	case *protocol.PublishFileSuccessPacket:
-		n.handlePublishFileSuccessPacket(packet, conn)
+	case *protocol.FileSuccessPacket:
+		n.handleFileSuccessPacket(packet, conn)
 	case *protocol.AlreadyExistsPacket:
 		n.handleAlreadyExistsPacket(packet, conn)
 	case *protocol.NotFoundPacket:
@@ -61,14 +61,24 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 	logger.Info("File %s information internally updated. Run 'status' in order to check for downloading files", packet.FileName)
 }
 
-// Handler for when a node publishes a file in the network
-func (n *Node) handlePublishFileSuccessPacket(packet *protocol.PublishFileSuccessPacket, conn *transport.TCPConnection) {
-	logger.Info("File %s published in the network successfully", packet.FileName)
+// Handler for when a node publishes/removes a file in/from the network
+func (n *Node) handleFileSuccessPacket(packet *protocol.FileSuccessPacket, conn *transport.TCPConnection) {
+	switch packet.Type {
+	case protocol.PublishFileType:
+		logger.Info("File %s published in the network successfully", packet.FileName)
 
-	// Remove file from pending and add it to published, since tracker has accepted it
-	file, _ := n.pending.Get(packet.FileName)
-	n.published.Put(packet.FileName, file)
-	n.pending.Delete(packet.FileName)
+		// Remove file from pending and add it to published, since tracker has accepted it
+		file, _ := n.pending.Get(packet.FileName)
+		n.published.Put(packet.FileName, file)
+		n.pending.Delete(packet.FileName)
+	case protocol.RemoveFileType:
+		logger.Info("File %s removed from the network successfully", packet.FileName)
+
+		// Remove file from published, since tracker has removed it from the network
+		n.published.Delete(packet.FileName)
+	default:
+		logger.Warn("Unknown file success packet type: %v", packet.Type)
+	}
 }
 
 // Handler for when the file, the node is trying to publish, already exists in the network

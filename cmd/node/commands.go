@@ -143,12 +143,8 @@ func (n *Node) status(_ []string) error {
 func (n *Node) removeFile(args []string) error {
 	filename := args[0]
 
-	n.published.Delete(filename)
-
 	packet := protocol.NewRemoveFilePacket(filename)
 	n.conn.EnqueuePacket(&packet)
-
-	logger.Info("Successfully removed file %s from the network", filename)
 
 	return nil
 }

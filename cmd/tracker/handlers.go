@@ -92,13 +92,22 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 func (t *Tracker) handleRemoveFilePacket(packet *protocol.RemoveFilePacket, conn *transport.TCPConnection) {
 	logger.Info("Remove file packet received from %s", conn.RemoteAddr())
 
-	// Remove file from the tracker
-	t.files.Delete(packet.FileName)
+	if _, ok := t.files.Get(packet.FileName); ok {
+		t.files.Delete(packet.FileName)
 
-	// Remove file from the node's list of files
-	t.nodes.ForEach(func(node *NodeInfo) {
-		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-			node.files.Delete(packet.FileName)
-		}
-	})
+		// Remove file from the node's list of files
+		t.nodes.ForEach(func(node *NodeInfo) {
+			if node.conn.RemoteAddr() == conn.RemoteAddr() {
+				node.files.Delete(packet.FileName)
+			}
+		})
+
+		rfsPacket := protocol.NewRemoveFileSuccessPacket(packet.FileName)
+		conn.EnqueuePacket(&rfsPacket)
+	} else {
+		logger.Info("File %s requested to be removed from %s does not exist", packet.FileName, conn.RemoteAddr())
+
+		nfPacket := protocol.NewNotFoundPacket(packet.FileName)
+		conn.EnqueuePacket(&nfPacket)
+	}
 }
