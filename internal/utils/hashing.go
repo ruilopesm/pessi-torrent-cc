@@ -38,6 +38,10 @@ func HashFileChunks(file *os.File, dest *[][20]byte) (uint64, error) {
 	}
 
 	fileSize := uint64(len(content))
+	if fileSize == 0 {
+		return 0, fmt.Errorf("file is empty")
+	}
+
 	chunkSize := ChunkSize(fileSize)
 	numChunks := uint64(math.Ceil(float64(fileSize) / float64(chunkSize)))
 
