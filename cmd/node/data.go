@@ -1,18 +1,15 @@
 package main
 
 import (
-	"PessiTorrent/internal/logger"
+	"PessiTorrent/internal/filewriter"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
-	"PessiTorrent/internal/utils"
 	"net"
-	"os"
 	"time"
 )
 
 const (
-	DownloadsFolder = "downloads"
-	ChunkTimeout    = 3 * time.Second
+	ChunkTimeout = 3 * time.Second
 )
 
 type File struct {
@@ -28,8 +25,10 @@ func NewFile(fileName string, path string) File {
 }
 
 type ForDownloadFile struct {
-	FileHash [20]byte
-	FileSize uint64
+	FileName   string
+	FileHash   [20]byte
+	FileSize   uint64
+	FileWriter *filewriter.FileWriter
 
 	NumberOfChunks uint16
 	Chunks         structures.SynchronizedList[ChunkInfo]
@@ -48,9 +47,21 @@ type NodeInfo struct {
 	Chunks structures.SynchronizedMap[uint16, time.Time]
 }
 
-func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fileSize uint64, numberOfChunks uint16) {
+func NewForDownloadFile(fileName string) *ForDownloadFile {
+	return &ForDownloadFile{
+		FileName: fileName,
+	}
+}
+
+func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fileSize uint64, numberOfChunks uint16) error {
 	f.FileHash = fileHash
 	f.FileSize = fileSize
+	fileWriter, err := filewriter.NewFileWriter(f.FileName, fileSize)
+	if err != nil {
+		return err
+	}
+	f.FileWriter = fileWriter
+	go f.FileWriter.Start()
 
 	f.NumberOfChunks = numberOfChunks
 	f.Chunks = structures.NewSynchronizedListWithInitialSize[ChunkInfo](uint(numberOfChunks))
@@ -63,6 +74,8 @@ func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fil
 	}
 
 	f.Nodes = structures.NewSynchronizedMap[*net.UDPAddr, *NodeInfo]()
+
+	return nil
 }
 
 func (f *ForDownloadFile) IsFileDownloaded() bool {
@@ -124,19 +137,6 @@ func (n *NodeInfo) ShouldRequestChunk(chunkIndex uint16) bool {
 	return chunk == time.Time{} || time.Since(chunk) > ChunkTimeout
 }
 
-func (f *ForDownloadFile) SaveChunkToDisk(fileName string, chunkIndex uint16, chunkContent []uint8) {
-	path := DownloadsFolder + "/" + fileName
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		logger.Error("Error opening file:", err)
-		return
-	}
-	defer file.Close()
-
-	chunkSize := utils.ChunkSize(uint64(f.FileSize))
-	_, err = file.WriteAt(chunkContent, int64(uint64(chunkIndex)*chunkSize))
-	if err != nil {
-		logger.Error("Error writing chunk to file:", err)
-		return
-	}
+func (f *ForDownloadFile) SaveChunkToDisk(chunkIndex uint16, chunkContent []uint8) {
+	f.FileWriter.EnqueueChunkToWrite(chunkIndex, chunkContent)
 }

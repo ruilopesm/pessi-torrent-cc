@@ -27,7 +27,7 @@ func (n *Node) requestFile(args []string) error {
 	n.conn.EnqueuePacket(&packet)
 
 	// Data of the file will be updated later, when the tracker responds back
-	n.forDownload.Put(filename, &ForDownloadFile{})
+	n.forDownload.Put(filename, NewForDownloadFile(filename))
 
 	return nil
 }
