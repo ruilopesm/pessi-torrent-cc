@@ -20,7 +20,7 @@ type FileWriter struct {
 	fileName    string
 	chunkSize   uint64
 	chunksQueue chan Chunk
-	afterWrite  func(index uint16)
+	onWrite     func(index uint16)
 	stopChannel chan struct{}
 	workerWg    sync.WaitGroup
 }
@@ -30,7 +30,7 @@ type Chunk struct {
 	data  []uint8
 }
 
-func NewFileWriter(fileName string, fileSize uint64, afterWrite func(index uint16)) (*FileWriter, error) {
+func NewFileWriter(fileName string, fileSize uint64, onWrite func(index uint16)) (*FileWriter, error) {
 	path := DownloadsFolder + "/" + fileName
 
 	// Create sparse file
@@ -52,7 +52,7 @@ func NewFileWriter(fileName string, fileSize uint64, afterWrite func(index uint1
 		fileName:    fileName,
 		chunkSize:   utils.ChunkSize(fileSize),
 		chunksQueue: make(chan Chunk),
-		afterWrite:  afterWrite,
+		onWrite:     onWrite,
 		stopChannel: make(chan struct{}),
 	}, nil
 }
@@ -90,7 +90,7 @@ func (fw *FileWriter) writeChunk(chunk Chunk) {
 	}
 
 	logger.Info("Chunk of index %d written to file %s", chunk.index, fw.fileName)
-	fw.afterWrite(chunk.index)
+	fw.onWrite(chunk.index)
 }
 
 func (fw *FileWriter) Stop() {
