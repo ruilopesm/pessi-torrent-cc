@@ -20,9 +20,9 @@ type FileWriter struct {
 	fileName    string
 	chunkSize   uint64
 	chunksQueue chan Chunk
+	afterWrite  func(index uint16)
 	stopChannel chan struct{}
-
-	workerWg sync.WaitGroup
+	workerWg    sync.WaitGroup
 }
 
 type Chunk struct {
@@ -30,7 +30,7 @@ type Chunk struct {
 	data  []uint8
 }
 
-func NewFileWriter(fileName string, fileSize uint64) (*FileWriter, error) {
+func NewFileWriter(fileName string, fileSize uint64, afterWrite func(index uint16)) (*FileWriter, error) {
 	path := DownloadsFolder + "/" + fileName
 
 	// Create sparse file
@@ -52,6 +52,7 @@ func NewFileWriter(fileName string, fileSize uint64) (*FileWriter, error) {
 		fileName:    fileName,
 		chunkSize:   utils.ChunkSize(fileSize),
 		chunksQueue: make(chan Chunk),
+		afterWrite:  afterWrite,
 		stopChannel: make(chan struct{}),
 	}, nil
 }
@@ -85,16 +86,17 @@ func (fw *FileWriter) workerPool() {
 func (fw *FileWriter) writeChunk(chunk Chunk) {
 	_, err := fw.file.WriteAt(chunk.data, int64(chunk.index)*int64(fw.chunkSize))
 	if err != nil {
-		logger.Error("Error writing chunk to file:", err)
+		logger.Error("Error writing chunk to file: %v", err)
 	}
 
 	logger.Info("Chunk of index %d written to file %s", chunk.index, fw.fileName)
+	fw.afterWrite(chunk.index)
 }
 
 func (fw *FileWriter) Stop() {
 	err := fw.file.Close()
 	if err != nil {
-		logger.Error("Error closing file:", err)
+		logger.Error("Error closing file: %v", err)
 	}
 
 	fw.stopChannel <- struct{}{}

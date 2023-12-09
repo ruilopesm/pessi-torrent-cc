@@ -56,7 +56,7 @@ func NewForDownloadFile(fileName string) *ForDownloadFile {
 func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fileSize uint64, numberOfChunks uint16) error {
 	f.FileHash = fileHash
 	f.FileSize = fileSize
-	fileWriter, err := filewriter.NewFileWriter(f.FileName, fileSize)
+	fileWriter, err := filewriter.NewFileWriter(f.FileName, fileSize, f.MarkChunkAsDownloaded)
 	if err != nil {
 		return err
 	}
@@ -137,6 +137,6 @@ func (n *NodeInfo) ShouldRequestChunk(chunkIndex uint16) bool {
 	return chunk == time.Time{} || time.Since(chunk) > ChunkTimeout
 }
 
-func (f *ForDownloadFile) SaveChunkToDisk(chunkIndex uint16, chunkContent []uint8) {
+func (f *ForDownloadFile) WriteChunkToDisk(chunkIndex uint16, chunkContent []uint8) {
 	f.FileWriter.EnqueueChunkToWrite(chunkIndex, chunkContent)
 }
