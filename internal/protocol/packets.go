@@ -2,6 +2,7 @@ package protocol
 
 // NODE -> TRACKER
 
+// InitPacket is sent by the node to the tracker when it starts
 type InitPacket struct {
 	IPAddr  [4]byte
 	UDPPort uint16
@@ -18,6 +19,7 @@ func (ip *InitPacket) GetPacketType() uint8 {
 	return InitType
 }
 
+// PublishFilePacket is sent by the node to the tracker when it wants to publish a file
 type PublishFilePacket struct {
 	FileName    string
 	FileSize    uint64
@@ -38,6 +40,7 @@ func (pf *PublishFilePacket) GetPacketType() uint8 {
 	return PublishFileType
 }
 
+// PublishChunkPacket is sent by the node to the tracker when it wants to update the tracker about the chunks it has from a file
 type PublishChunkPacket struct {
 	FileHash     [20]byte
 	BitfieldSize uint16
@@ -59,6 +62,7 @@ func (pc *PublishChunkPacket) GetPacketType() uint8 {
 	return PublishChunkType
 }
 
+// RequestFilePacket is sent by the node to the tracker when it wants to download a file to get information about the file
 type RequestFilePacket struct {
 	FileName string
 }
@@ -73,6 +77,10 @@ func (rf *RequestFilePacket) GetPacketType() uint8 {
 	return RequestFileType
 }
 
+// TRACKER -> NODE
+
+// FileSuccessPacket is sent by the tracker to the node when it
+// has successfully published(Type = PublishFileType)/removed(Type = RemoveFileType) a file
 type FileSuccessPacket struct {
 	FileName string
 	Type     uint8
@@ -96,8 +104,7 @@ func (fs *FileSuccessPacket) GetPacketType() uint8 {
 	return FileSuccessType
 }
 
-// TRACKER -> NODE
-
+// AlreadyExistsPacket is sent by the tracker to the node when it wants to publish a file that already exists in the network
 type AlreadyExistsPacket struct {
 	Filename string
 }
@@ -112,6 +119,7 @@ func (ae *AlreadyExistsPacket) GetPacketType() uint8 {
 	return AlreadyExistsType
 }
 
+// NotFoundPacket is sent by the tracker to the node when it wants to download or remove a file that does not exist
 type NotFoundPacket struct {
 	Filename string
 }
@@ -126,39 +134,36 @@ func (nf *NotFoundPacket) GetPacketType() uint8 {
 	return NotFoundType
 }
 
+// AnswerNodesPacket is sent by the tracker to the node when it wants to download a file to give information about the file
 type AnswerNodesPacket struct {
-	FileName      string
-	FileSize      uint64
-	FileHash      [20]byte
-	ChunkHashes   [][20]byte
-	NumberOfNodes uint16
-	Nodes         []NodeFileInfo
+	FileName    string
+	FileSize    uint64
+	FileHash    [20]byte
+	ChunkHashes [][20]byte
+	Nodes       []NodeFileInfo
 }
 
 type NodeFileInfo struct {
-	IPAddr       [4]byte
-	Port         uint16
-	BitfieldSize uint16
-	Bitfield     []uint8
+	IPAddr   [4]byte
+	Port     uint16
+	Bitfield []uint8
 }
 
-func NewAnswerNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte, nNodes uint16, ipAddrs [][4]byte, ports []uint16, bitfields [][]uint16) AnswerNodesPacket {
+func NewAnswerNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte, ipAddrs [][4]byte, ports []uint16, bitfields [][]uint16) AnswerNodesPacket {
 	an := AnswerNodesPacket{
-		FileName:      fileName,
-		FileSize:      fileSize,
-		FileHash:      fileHash,
-		ChunkHashes:   chunkHashes,
-		NumberOfNodes: nNodes,
+		FileName:    fileName,
+		FileSize:    fileSize,
+		FileHash:    fileHash,
+		ChunkHashes: chunkHashes,
 	}
 
-	for i := 0; i < int(nNodes); i++ {
+	for i := 0; i < len(bitfields); i++ {
 		bitfield := EncodeBitField(bitfields[i])
 
 		node := NodeFileInfo{
-			BitfieldSize: uint16(len(bitfield)),
-			IPAddr:       ipAddrs[i],
-			Port:         ports[i],
-			Bitfield:     bitfield,
+			IPAddr:   ipAddrs[i],
+			Port:     ports[i],
+			Bitfield: bitfield,
 		}
 		an.Nodes = append(an.Nodes, node)
 	}
