@@ -1,0 +1,9 @@
+zone "local" {
+    type master;
+    file "/etc/bind/local.zone";
+};
+
+zone "10.in-addr.arpa" {
+    type master;
+    file "/etc/bind/reverse.zone";
+};

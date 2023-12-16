@@ -189,11 +189,12 @@ node n8 {
 	!
     }
     canvas c1
-    iconcoords {169.0 131.0}
-    labelcoords {193.0 119.0}
+    iconcoords {197.0 167.0}
+    labelcoords {221.0 155.0}
     interface-peer {e0 n1}
     interface-peer {e1 n12}
     interface-peer {e2 n13}
+    interface-peer {e3 n20}
 }
 
 node n9 {
@@ -242,7 +243,7 @@ node n12 {
     type router
     model host
     network-config {
-	hostname Servidor1
+	hostname DNS1
 	!
 	interface eth0
 	 ip address 10.4.4.1/24
@@ -250,8 +251,8 @@ node n12 {
 	!
     }
     canvas c1
-    iconcoords {65.0 66.0}
-    labelcoords {48.0 104.0}
+    iconcoords {182.0 77.0}
+    labelcoords {145.0 83.0}
     interface-peer {eth0 n8}
     custom-config {
 	custom-config-id service:UserDefined
@@ -318,7 +319,7 @@ node n13 {
     type router
     model host
     network-config {
-	hostname Servidor2
+	hostname Servidor1
 	!
 	interface eth0
 	 ip address 10.4.4.2/24
@@ -326,8 +327,8 @@ node n13 {
 	!
     }
     canvas c1
-    iconcoords {50.0 150.0}
-    labelcoords {50.0 182.0}
+    iconcoords {55.0 169.0}
+    labelcoords {61.0 152.0}
     interface-peer {eth0 n8}
     custom-config {
 	custom-config-id service:UserDefined
@@ -848,6 +849,23 @@ node n19 {
     services {DefaultRoute SSH StaticRoute UserDefined}
 }
 
+node n20 {
+    type router
+    model host
+    network-config {
+	hostname DNS2
+	!
+	interface eth0
+	 ip address 10.4.4.10/24
+	 ipv6 address 2001:4:4::10/64
+	!
+    }
+    canvas c1
+    iconcoords {52.0 79.0}
+    labelcoords {51.0 117.0}
+    interface-peer {eth0 n8}
+}
+
 link l1 {
     nodes {n1 n2}
     bandwidth 0
@@ -959,6 +977,11 @@ link l22 {
 
 link l23 {
     nodes {n14 n9}
+    bandwidth 0
+}
+
+link l8 {
+    nodes {n20 n8}
     bandwidth 0
 }
 
@@ -1088,7 +1111,7 @@ annotation a20 {
     label {Link 10 Mbps, 5 milisec, loss=10%, dup=5% (cyan)}
     labelcolor #8900b0
     fontfamily {Arial}
-    fontsize 10
+    fontsize {10}
     effects {bold}
     canvas c1
 }
@@ -1147,7 +1170,7 @@ annotation a3 {
 }
 
 annotation a4 {
-    iconcoords {7.0 38.0 241.0 190.0}
+    iconcoords {0 51 238 207}
     type rectangle
     label {}
     labelcolor black
