@@ -39,8 +39,8 @@ func (pf *PublishFilePacket) GetPacketType() uint8 {
 }
 
 type PublishChunkPacket struct {
-	BitfieldSize uint16
 	FileHash     [20]byte
+	BitfieldSize uint16
 	Bitfield     []uint8
 }
 
@@ -49,8 +49,8 @@ func NewPublishChunkPacket(fileHash [20]byte, bitfield []uint16) PublishChunkPac
 	bitfieldSize := len(binaryBitfield)
 
 	return PublishChunkPacket{
-		BitfieldSize: uint16(bitfieldSize),
 		FileHash:     fileHash,
+		BitfieldSize: uint16(bitfieldSize),
 		Bitfield:     binaryBitfield,
 	}
 }
