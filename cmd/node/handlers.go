@@ -48,7 +48,11 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 		return
 	}
 
-	forDownloadFile.SetData(packet.FileHash, packet.ChunkHashes, packet.FileSize, uint16(len(packet.ChunkHashes)))
+	err := forDownloadFile.SetData(packet.FileHash, packet.ChunkHashes, packet.FileSize, uint16(len(packet.ChunkHashes)))
+	if err != nil {
+		logger.Error("Error setting data for file %s: %v", packet.FileName, err)
+		return
+	}
 
 	for _, node := range packet.Nodes {
 		udpAddr := net.UDPAddr{
@@ -115,17 +119,8 @@ func (n *Node) handleChunkPacket(packet *protocol.ChunkPacket, addr *net.UDPAddr
 		return
 	}
 
-	// Update chunk info
-	forDownloadFile.MarkChunkAsDownloaded(packet.Chunk)
-
 	// Write chunk to file
-	forDownloadFile.SaveChunkToDisk(packet.FileName, packet.Chunk, packet.ChunkContent)
-	logger.Info("Chunk %d of file %s saved to disk", packet.Chunk, packet.FileName)
-
-	if forDownloadFile.IsFileDownloaded() {
-		logger.Info("File %s downloaded successfully", packet.FileName)
-		n.forDownload.Delete(packet.FileName)
-	}
+	forDownloadFile.WriteChunkToDisk(packet.Chunk, packet.ChunkContent)
 }
 
 func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, addr *net.UDPAddr) {

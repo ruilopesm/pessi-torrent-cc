@@ -108,6 +108,13 @@ func (n *Node) startTicker() {
 
 func (n *Node) tick() {
 	n.forDownload.ForEach(func(fileName string, file *ForDownloadFile) {
+		if file.IsFileDownloaded() {
+			logger.Info("File %s was successfully downloaded", fileName)
+			n.forDownload.Delete(fileName)
+			file.FileWriter.Stop()
+			return
+		}
+
 		missingChunks := file.GetMissingChunks()
 
 		file.Nodes.ForEach(func(nodeAddr *net.UDPAddr, nodeInfo *NodeInfo) {
