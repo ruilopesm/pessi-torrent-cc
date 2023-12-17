@@ -119,13 +119,15 @@ func (n *Node) tick() {
 
 		missingChunks := file.GetMissingChunks()
 
-		file.Nodes.ForEach(func(nodeAddr *net.UDPAddr, nodeInfo *NodeInfo) {
+		file.Nodes.ForEach(func(nodeAddrString string, nodeInfo *NodeInfo) {
 			missingChunksPerNode := make([]uint16, 0)
 			for _, chunk := range missingChunks {
 				if nodeInfo.ShouldRequestChunk(uint16(chunk)) {
 					missingChunksPerNode = append(missingChunksPerNode, uint16(chunk))
 				}
 			}
+
+			nodeAddr, _ := net.ResolveUDPAddr("udp4", nodeAddrString)
 
 			if len(missingChunksPerNode) > 0 {
 				logger.Info("Requesting %d chunks to %s", len(missingChunksPerNode), nodeAddr)

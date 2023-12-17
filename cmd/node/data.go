@@ -33,7 +33,7 @@ type ForDownloadFile struct {
 	NumberOfChunks uint16
 	Chunks         structures.SynchronizedList[ChunkInfo]
 
-	Nodes structures.SynchronizedMap[*net.UDPAddr, *NodeInfo]
+	Nodes structures.SynchronizedMap[string, *NodeInfo]
 }
 
 type ChunkInfo struct {
@@ -73,7 +73,7 @@ func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fil
 		})
 	}
 
-	f.Nodes = structures.NewSynchronizedMap[*net.UDPAddr, *NodeInfo]()
+	f.Nodes = structures.NewSynchronizedMap[string, *NodeInfo]()
 
 	return nil
 }
@@ -92,7 +92,7 @@ func (f *ForDownloadFile) AddNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
 		nodeInfo.Chunks.Put(chunkIndex, time.Time{})
 	}
 
-	f.Nodes.Put(nodeAddr, &nodeInfo)
+	f.Nodes.Put(nodeAddr.String(), &nodeInfo)
 }
 
 func (f *ForDownloadFile) MarkChunkAsRequested(chunkIndex uint16, nodeInfo *NodeInfo) {
