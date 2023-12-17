@@ -107,10 +107,12 @@ func (n *Node) startTicker() {
 }
 
 func (n *Node) tick() {
-	n.forDownload.ForEach(func(fileName string, file *ForDownloadFile) {
+	n.forDownload.Lock()
+	defer n.forDownload.Unlock()
+	for fileName, file := range n.forDownload.M {
 		if file.IsFileDownloaded() {
 			logger.Info("File %s was successfully downloaded", fileName)
-			n.forDownload.Delete(fileName)
+			delete(n.forDownload.M, fileName)
 			file.FileWriter.Stop()
 			return
 		}
@@ -136,7 +138,7 @@ func (n *Node) tick() {
 				}
 			}
 		})
-	})
+	}
 }
 
 func (n *Node) Stop() {
