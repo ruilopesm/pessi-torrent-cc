@@ -114,11 +114,12 @@ func (n *Node) startTicker() {
 func (n *Node) tick() {
 	n.forDownload.Lock()
 	defer n.forDownload.Unlock()
+
 	for fileName, file := range n.forDownload.M {
 		if file.IsFileDownloaded() {
 			logger.Info("File %s was successfully downloaded", fileName)
-			delete(n.forDownload.M, fileName)
 			file.FileWriter.Stop()
+			delete(n.forDownload.M, fileName)
 			return
 		}
 

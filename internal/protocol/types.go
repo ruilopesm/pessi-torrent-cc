@@ -1,17 +1,17 @@
 package protocol
 
 const (
-	InitType = 0
-	PublishFileType = 1
-	FileSuccessType = 2
+	InitType          = 0
+	PublishFileType   = 1
+	FileSuccessType   = 2
 	AlreadyExistsType = 3
-	NotFoundType = 4
-	PublishChunkType = 5
-	RequestFileType = 6
-	AnswerNodesType = 7
-	RemoveFileType = 8
+	NotFoundType      = 4
+	PublishChunkType  = 5
+	RequestFileType   = 6
+	AnswerNodesType   = 7
+	RemoveFileType    = 8
 	RequestChunksType = 9
-	ChunkType = 10
+	ChunkType         = 10
 )
 
 type Packet interface {
