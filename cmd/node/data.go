@@ -128,13 +128,18 @@ func (f *ForDownloadFile) LengthOfMissingChunks() int {
 }
 
 func (n *NodeInfo) ShouldRequestChunk(chunkIndex uint16) bool {
-	chunk, ok := n.Chunks.Get(chunkIndex)
+	chunk, ok := n.GetLastTimeChunkWasRequested(chunkIndex)
 	if !ok {
 		return false
 	}
 
 	// Chunk was not requested yet or it was requested more than 3 seconds ago
 	return chunk == time.Time{} || time.Since(chunk) > ChunkTimeout
+}
+
+func (n *NodeInfo) GetLastTimeChunkWasRequested(chunkIndex uint16) (time.Time, bool) {
+	chunk, ok := n.Chunks.Get(chunkIndex)
+	return chunk, ok
 }
 
 func (f *ForDownloadFile) WriteChunkToDisk(chunkIndex uint16, chunkContent []uint8) {

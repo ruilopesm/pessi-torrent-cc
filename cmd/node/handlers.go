@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"time"
 )
 
 func (n *Node) HandlePackets(packet protocol.Packet, conn *transport.TCPConnection) {
@@ -116,7 +117,18 @@ func (n *Node) handleChunkPacket(packet *protocol.ChunkPacket, addr *net.UDPAddr
 
 	// Discard packet if hash of chunk is not correct
 	if forDownloadFile.GetChunkHash(packet.Chunk) != utils.HashChunk(packet.ChunkContent) {
+		logger.Warn("Received incorrect hash of chunk %d of file %s", packet.Chunk, packet.FileName)
 		return
+	}
+
+	nodeInfo, ok := forDownloadFile.Nodes.Get(addr.String())
+	if !ok {
+		logger.Warn("Node %s sent unrequested chunk from file %s", addr, packet.FileName)
+	} else {
+		requested, b := nodeInfo.GetLastTimeChunkWasRequested(packet.Chunk)
+		if b && requested != (time.Time{}) {
+			n.nodeStatistics.addDownloadedChunk(addr.String(), uint64(len(packet.ChunkContent)), requested, time.Now())
+		}
 	}
 
 	// Write chunk to file
@@ -165,5 +177,6 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 		// Send chunk bytes
 		packet := protocol.NewChunkPacket(packet.FileName, chunk, chunkContent[:read])
 		n.srv.SendPacket(&packet, addr)
+		n.nodeStatistics.addUploadedBytes(chunkSize)
 	}
 }

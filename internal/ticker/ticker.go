@@ -35,7 +35,7 @@ func (t ticker) start() {
 		select {
 		case <-t.quitChannel:
 			return
-		case <-time.After(1 * time.Second):
+		case <-time.After(100 * time.Millisecond):
 			t.toExecute()
 		}
 	}

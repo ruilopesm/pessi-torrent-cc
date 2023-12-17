@@ -89,7 +89,7 @@ func (fw *FileWriter) writeChunk(chunk Chunk) {
 		logger.Error("Error writing chunk to file: %v", err)
 	}
 
-	logger.Info("Chunk of index %d written to file %s", chunk.index, fw.fileName)
+	//logger.Info("Chunk of index %d written to file %s", chunk.index, fw.fileName)
 	fw.onWrite(chunk.index)
 }
 

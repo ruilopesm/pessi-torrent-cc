@@ -148,3 +148,16 @@ func (n *Node) removeFile(args []string) error {
 
 	return nil
 }
+
+// statistics
+func (n *Node) statistics(_ []string) error {
+	statistics := n.nodeStatistics
+	logger.Info("Total uploaded: %d bytes", statistics.TotalUploaded)
+	logger.Info("Total downloaded: %d bytes", statistics.TotalDownloaded)
+
+	for addr := range statistics.nodeMap {
+		logger.Info("Average download speed from %s: %.2f bytes/s", addr, statistics.getAverageDownloadSpeed(addr))
+	}
+
+	return nil
+}
