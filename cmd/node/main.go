@@ -14,7 +14,7 @@ func main() {
 		return
 	}
 
-  dns := cfg.DNS.Host + ":" + strconv.FormatUint(uint64(cfg.DNS.Port), 10) 
+	dns := cfg.DNS.Host + ":" + strconv.FormatUint(uint64(cfg.DNS.Port), 10)
 	trackerAddr := cfg.Tracker.Host + ":" + strconv.Itoa(int(cfg.Tracker.Port))
 	udpPort := cfg.Node.Port
 

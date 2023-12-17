@@ -13,7 +13,7 @@ import (
 )
 
 type Node struct {
-  dns *dns.DNS
+	dns *dns.DNS
 
 	trackerAddr string
 	udpPort     uint16
@@ -32,7 +32,7 @@ type Node struct {
 
 func NewNode(trackerAddr string, udpPort uint16, dnsAddr string) Node {
 	return Node{
-    dns: dns.NewDNS(dnsAddr),
+		dns: dns.NewDNS(dnsAddr),
 
 		trackerAddr: trackerAddr,
 		udpPort:     udpPort,
@@ -71,8 +71,8 @@ func (n *Node) startTCP() {
 	ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
 	domain, err := n.dns.ResolveDomain(net.IP(ipAddr[:]).String())
 	if err != nil {
-    logger.Error("Error resolving domain: %v", err)
-    return
+		logger.Error("Error resolving domain: %v", err)
+		return
 	}
 
 	packet := protocol.NewInitPacket(domain, n.udpPort)

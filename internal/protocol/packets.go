@@ -1,17 +1,18 @@
 package protocol
+
 // TODO: Change the packets that send IP addresses to send domain names instead
 
 // NODE -> TRACKER
 
 // InitPacket is sent by the node to the tracker when it starts
 type InitPacket struct {
-  Name  string
+	Name    string
 	UDPPort uint16
 }
 
 func NewInitPacket(name string, udpPort uint16) InitPacket {
 	return InitPacket{
-		Name:  name,
+		Name:    name,
 		UDPPort: udpPort,
 	}
 }
@@ -162,7 +163,7 @@ func NewAnswerNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, c
 		bitfield := EncodeBitField(bitfields[i])
 
 		node := NodeFileInfo{
-			Name:   names[i],
+			Name:     names[i],
 			Port:     ports[i],
 			Bitfield: bitfield,
 		}

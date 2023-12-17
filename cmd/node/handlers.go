@@ -55,16 +55,16 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 	}
 
 	for _, node := range packet.Nodes {
-    ipAddrStr, err := n.dns.ResolveDomain(node.Name)
-    ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
+		ipAddrStr, _ := n.dns.ResolveDomain(node.Name)
+		ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
 
-    if err != nil {
-      logger.Error("Error resolving domain %s: %v", node.Name, err)
-      continue
-    }
+		if err != nil {
+			logger.Error("Error resolving domain %s: %v", node.Name, err)
+			continue
+		}
 
 		udpAddr := net.UDPAddr{
-			IP:  ipAddr.IP,
+			IP:   ipAddr.IP,
 			Port: int(node.Port),
 		}
 		forDownloadFile.AddNode(&udpAddr, node.Bitfield)
