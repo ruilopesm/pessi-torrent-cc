@@ -32,9 +32,6 @@ type Node struct {
 
 	nodeStatistics *NodeStatistics
 
-	// Last time the node sent a UpdateChunksPacket to the tracker
-	lastServerChunksUpdate time.Time
-
 	quitChannel chan struct{}
 }
 
@@ -48,8 +45,6 @@ func NewNode(trackerAddr string, udpPort uint16) Node {
 		forDownload: structures.NewSynchronizedMap[string, *ForDownloadFile](),
 
 		nodeStatistics: NewNodeStatistics(),
-
-		lastServerChunksUpdate: time.Now(),
 
 		quitChannel: make(chan struct{}),
 	}
@@ -134,15 +129,23 @@ func (n *Node) updateServerChunks(file *ForDownloadFile) {
 	n.conn.EnqueuePacket(&packet)
 }
 
+func (n *Node) SendRequestUpdateFile(fileName string) {
+	packet := protocol.NewRequestFilePacket(fileName)
+	n.conn.EnqueuePacket(&packet)
+}
+
 func (n *Node) tick() {
 	n.forDownload.Lock()
 	defer n.forDownload.Unlock()
 
 	for fileName, file := range n.forDownload.M {
-		if time.Now().Sub(n.lastServerChunksUpdate) > UpdateServerChunksInterval || file.IsFileDownloaded() {
-			n.lastServerChunksUpdate = time.Now()
+		if time.Now().Sub(file.LastServerChunksUpdate) > UpdateServerChunksInterval || file.IsFileDownloaded() {
+			file.LastServerChunksUpdate = time.Now()
 			n.updateServerChunks(file)
 			logger.Info("Sent update chunks packet to tracker for file %s", fileName)
+
+			// Also request to update our nodes info about the file
+			n.SendRequestUpdateFile(fileName)
 		}
 
 		if file.IsFileDownloaded() {

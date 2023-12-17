@@ -30,6 +30,9 @@ type ForDownloadFile struct {
 	FileSize   uint64
 	FileWriter *filewriter.FileWriter
 
+	// Last time the node sent a UpdateChunksPacket to the tracker
+	LastServerChunksUpdate time.Time
+
 	NumberOfChunks uint16
 	Chunks         structures.SynchronizedList[ChunkInfo]
 
@@ -44,12 +47,18 @@ type ChunkInfo struct {
 
 type NodeInfo struct {
 	// Chunk index -> Last time chunk was requested
-	Chunks structures.SynchronizedMap[uint16, time.Time]
+	Chunks structures.SynchronizedMap[uint16, RequestInfo]
+}
+
+type RequestInfo struct {
+	TimeLastRequested time.Time
+	NumberOfTries     uint
 }
 
 func NewForDownloadFile(fileName string) *ForDownloadFile {
 	return &ForDownloadFile{
-		FileName: fileName,
+		FileName:               fileName,
+		LastServerChunksUpdate: time.Now(),
 	}
 }
 
@@ -84,13 +93,13 @@ func (f *ForDownloadFile) IsFileDownloaded() bool {
 
 func (f *ForDownloadFile) AddNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
 	nodeInfo := NodeInfo{
-		Chunks: structures.NewSynchronizedMap[uint16, time.Time](),
+		Chunks: structures.NewSynchronizedMap[uint16, RequestInfo](),
 	}
 
 	decoded := protocol.DecodeBitField(bitfield)
 	for index, hasChunk := range decoded {
 		if hasChunk {
-			nodeInfo.Chunks.Put(uint16(index), time.Time{})
+			nodeInfo.Chunks.Put(uint16(index), RequestInfo{TimeLastRequested: time.Time{}})
 		}
 	}
 
@@ -98,7 +107,7 @@ func (f *ForDownloadFile) AddNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
 }
 
 func (f *ForDownloadFile) MarkChunkAsRequested(chunkIndex uint16, nodeInfo *NodeInfo) {
-	nodeInfo.Chunks.Put(chunkIndex, time.Now())
+	nodeInfo.Chunks.Put(chunkIndex, RequestInfo{TimeLastRequested: time.Now()})
 }
 
 func (f *ForDownloadFile) MarkChunkAsDownloaded(chunkIndex uint16) {
@@ -153,8 +162,8 @@ func (n *NodeInfo) ShouldRequestChunk(chunkIndex uint16) bool {
 }
 
 func (n *NodeInfo) GetLastTimeChunkWasRequested(chunkIndex uint16) (time.Time, bool) {
-	chunk, ok := n.Chunks.Get(chunkIndex)
-	return chunk, ok
+	requestInfo, ok := n.Chunks.Get(chunkIndex)
+	return requestInfo.TimeLastRequested, ok
 }
 
 func (f *ForDownloadFile) WriteChunkToDisk(chunkIndex uint16, chunkContent []uint8) {
