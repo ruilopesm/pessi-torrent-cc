@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	ChunkTimeout = 3 * time.Second
+	ChunkTimeout = 500 * time.Millisecond
 )
 
 type File struct {
@@ -88,8 +88,10 @@ func (f *ForDownloadFile) AddNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
 	}
 
 	decoded := protocol.DecodeBitField(bitfield)
-	for _, chunkIndex := range decoded {
-		nodeInfo.Chunks.Put(chunkIndex, time.Time{})
+	for index, hasChunk := range decoded {
+		if hasChunk {
+			nodeInfo.Chunks.Put(uint16(index), time.Time{})
+		}
 	}
 
 	f.Nodes.Put(nodeAddr.String(), &nodeInfo)
@@ -123,6 +125,18 @@ func (f *ForDownloadFile) GetMissingChunks() []uint {
 	return missingChunks
 }
 
+func (f *ForDownloadFile) GetNumberOfNodesWhichHaveChunk(chunkIndex uint16) uint {
+	var numberOfNodes uint = 0
+	f.Nodes.ForEach(func(nodeAddrString string, nodeInfo *NodeInfo) {
+		_, ok := nodeInfo.Chunks.Get(chunkIndex)
+		if ok {
+			numberOfNodes++
+		}
+	})
+
+	return numberOfNodes
+}
+
 func (f *ForDownloadFile) LengthOfMissingChunks() int {
 	return len(f.GetMissingChunks())
 }
@@ -133,7 +147,8 @@ func (n *NodeInfo) ShouldRequestChunk(chunkIndex uint16) bool {
 		return false
 	}
 
-	// Chunk was not requested yet or it was requested more than 3 seconds ago
+	// Chunk was not requested yet or it was requested more than the chunk timeout ago
+	// The expected time could be improved by calculating the average time between requests
 	return chunk == time.Time{} || time.Since(chunk) > ChunkTimeout
 }
 

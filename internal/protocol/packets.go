@@ -40,26 +40,21 @@ func (pf *PublishFilePacket) GetPacketType() uint8 {
 	return PublishFileType
 }
 
-// PublishChunkPacket is sent by the node to the tracker when it wants to update the tracker about the chunks it has from a file
-type PublishChunkPacket struct {
-	FileHash     [20]byte
-	BitfieldSize uint16
-	Bitfield     []uint8
+// UpdateChunksPacket is sent by the node to the tracker when it wants to update the tracker about the chunks it has from a file
+type UpdateChunksPacket struct {
+	FileName string
+	Bitfield Bitfield
 }
 
-func NewPublishChunkPacket(fileHash [20]byte, bitfield []uint16) PublishChunkPacket {
-	binaryBitfield := EncodeBitField(bitfield)
-	bitfieldSize := len(binaryBitfield)
-
-	return PublishChunkPacket{
-		FileHash:     fileHash,
-		BitfieldSize: uint16(bitfieldSize),
-		Bitfield:     binaryBitfield,
+func NewUpdateChunksPacket(fileName string, bitfield Bitfield) UpdateChunksPacket {
+	return UpdateChunksPacket{
+		FileName: fileName,
+		Bitfield: bitfield,
 	}
 }
 
-func (pc *PublishChunkPacket) GetPacketType() uint8 {
-	return PublishChunkType
+func (pc *UpdateChunksPacket) GetPacketType() uint8 {
+	return UpdateChunksType
 }
 
 // RequestFilePacket is sent by the node to the tracker when it wants to download a file to get information about the file
@@ -149,7 +144,7 @@ type NodeFileInfo struct {
 	Bitfield []uint8
 }
 
-func NewAnswerNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte, ipAddrs [][4]byte, ports []uint16, bitfields [][]uint16) AnswerNodesPacket {
+func NewAnswerNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte, ipAddrs [][4]byte, ports []uint16, bitfields []Bitfield) AnswerNodesPacket {
 	an := AnswerNodesPacket{
 		FileName:    fileName,
 		FileSize:    fileSize,
@@ -158,7 +153,7 @@ func NewAnswerNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, c
 	}
 
 	for i := 0; i < len(bitfields); i++ {
-		bitfield := EncodeBitField(bitfields[i])
+		bitfield := bitfields[i]
 
 		node := NodeFileInfo{
 			IPAddr:   ipAddrs[i],

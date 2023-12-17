@@ -6,7 +6,7 @@ const (
 	FileSuccessType   = 2
 	AlreadyExistsType = 3
 	NotFoundType      = 4
-	PublishChunkType  = 5
+	UpdateChunksType  = 5
 	RequestFileType   = 6
 	AnswerNodesType   = 7
 	RemoveFileType    = 8
@@ -30,8 +30,8 @@ func PacketStructFromType(packetType uint8) Packet {
 		return &AlreadyExistsPacket{}
 	case NotFoundType:
 		return &NotFoundPacket{}
-	case PublishChunkType:
-		return &PublishChunkPacket{}
+	case UpdateChunksType:
+		return &UpdateChunksPacket{}
 	case RequestFileType:
 		return &RequestFilePacket{}
 	case AnswerNodesType:

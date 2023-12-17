@@ -17,6 +17,8 @@ func (t *Tracker) HandlePackets(packet protocol.Packet, conn *transport.TCPConne
 		t.handleRequestFilePacket(packet, conn)
 	case *protocol.RemoveFilePacket:
 		t.handleRemoveFilePacket(packet, conn)
+	case *protocol.UpdateChunksPacket:
+		t.handlePublishChunkPacket(packet, conn)
 	default:
 		logger.Error("Unknown packet type received from %s", conn.RemoteAddr())
 	}
@@ -26,7 +28,7 @@ func (t *Tracker) handleInitPacket(packet *protocol.InitPacket, conn *transport.
 	logger.Info("Init packet received from %s", conn.RemoteAddr())
 
 	newNode := NewNodeInfo(*conn, packet.UDPPort)
-	t.nodes.Add(&newNode)
+	t.nodes.Put(conn.RemoteAddr().String(), &newNode)
 
 	logger.Info("Registered node with data: %v, %v", packet.IPAddr, packet.UDPPort)
 }
@@ -48,12 +50,10 @@ func (t *Tracker) handlePublishFilePacket(packet *protocol.PublishFilePacket, co
 	t.files.Put(packet.FileName, &file)
 
 	// Add file to the node's list of files
-	t.nodes.ForEach(func(node *NodeInfo) {
-		if node.conn.RemoteAddr() == conn.RemoteAddr() {
-			sharedFile := NewSharedFile(packet.FileName, packet.FileSize, packet.FileHash, packet.ChunkHashes)
-			node.files.Put(packet.FileName, &sharedFile)
-		}
-	})
+	nodeInfo, ok := t.nodes.Get(conn.RemoteAddr().String())
+	if ok {
+		nodeInfo.files.Put(packet.FileName, protocol.NewCheckedBitfield(len(packet.ChunkHashes)))
+	}
 
 	// Send response back to the node
 	pfsPacket := protocol.NewPublishFileSuccessPacket(packet.FileName)
@@ -66,13 +66,13 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 	if file, ok := t.files.Get(packet.FileName); ok {
 		var ipAddrs [][4]byte
 		var ports []uint16
-		var bitfields [][]uint16
+		var bitfields []protocol.Bitfield
 
-		t.nodes.ForEach(func(node *NodeInfo) {
-			if file, exists := node.files.Get(packet.FileName); exists {
+		t.nodes.ForEach(func(_ string, node *NodeInfo) {
+			if bitfield, exists := node.files.Get(packet.FileName); exists {
 				ipAddrs = append(ipAddrs, utils.TCPAddrToBytes(node.conn.RemoteAddr()))
 				ports = append(ports, node.udpPort)
-				bitfields = append(bitfields, file.Bitfield)
+				bitfields = append(bitfields, bitfield)
 			}
 		})
 
@@ -94,11 +94,10 @@ func (t *Tracker) handleRemoveFilePacket(packet *protocol.RemoveFilePacket, conn
 		t.files.Delete(packet.FileName)
 
 		// Remove file from the node's list of files
-		t.nodes.ForEach(func(node *NodeInfo) {
-			if node.conn.RemoteAddr() == conn.RemoteAddr() {
-				node.files.Delete(packet.FileName)
-			}
-		})
+		nodeInfo, ok := t.nodes.Get(conn.RemoteAddr().String())
+		if ok {
+			nodeInfo.files.Delete(packet.FileName)
+		}
 
 		rfsPacket := protocol.NewRemoveFileSuccessPacket(packet.FileName)
 		conn.EnqueuePacket(&rfsPacket)
@@ -107,5 +106,15 @@ func (t *Tracker) handleRemoveFilePacket(packet *protocol.RemoveFilePacket, conn
 
 		nfPacket := protocol.NewNotFoundPacket(packet.FileName)
 		conn.EnqueuePacket(&nfPacket)
+	}
+}
+
+func (t *Tracker) handlePublishChunkPacket(packet *protocol.UpdateChunksPacket, conn *transport.TCPConnection) {
+	logger.Info("Publish chunk packet received from %s", conn.RemoteAddr())
+
+	// Update node's bitfield
+	nodeInfo, ok := t.nodes.Get(conn.RemoteAddr().String())
+	if ok {
+		nodeInfo.files.Put(packet.FileName, packet.Bitfield)
 	}
 }

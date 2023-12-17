@@ -9,6 +9,12 @@ import (
 	"PessiTorrent/internal/transport"
 	"PessiTorrent/internal/utils"
 	"net"
+	"sort"
+	"time"
+)
+
+const (
+	UpdateServerChunksInterval = 5 * time.Second
 )
 
 type Node struct {
@@ -26,6 +32,9 @@ type Node struct {
 
 	nodeStatistics *NodeStatistics
 
+	// Last time the node sent a UpdateChunksPacket to the tracker
+	lastServerChunksUpdate time.Time
+
 	quitChannel chan struct{}
 }
 
@@ -39,6 +48,8 @@ func NewNode(trackerAddr string, udpPort uint16) Node {
 		forDownload: structures.NewSynchronizedMap[string, *ForDownloadFile](),
 
 		nodeStatistics: NewNodeStatistics(),
+
+		lastServerChunksUpdate: time.Now(),
 
 		quitChannel: make(chan struct{}),
 	}
@@ -111,19 +122,45 @@ func (n *Node) startTicker() {
 	n.tck = tck
 }
 
+func (n *Node) updateServerChunks(file *ForDownloadFile) {
+	bitfield := make([]bool, 0)
+	file.Chunks.ForEach(func(chunkInfo ChunkInfo) {
+		bitfield = append(bitfield, chunkInfo.Downloaded)
+	})
+
+	encondedBitfield := protocol.EncodeBitField(bitfield)
+
+	packet := protocol.NewUpdateChunksPacket(file.FileName, encondedBitfield)
+	n.conn.EnqueuePacket(&packet)
+}
+
 func (n *Node) tick() {
 	n.forDownload.Lock()
 	defer n.forDownload.Unlock()
 
 	for fileName, file := range n.forDownload.M {
+		if time.Now().Sub(n.lastServerChunksUpdate) > UpdateServerChunksInterval || file.IsFileDownloaded() {
+			n.lastServerChunksUpdate = time.Now()
+			n.updateServerChunks(file)
+			logger.Info("Sent update chunks packet to tracker for file %s", fileName)
+		}
+
 		if file.IsFileDownloaded() {
 			logger.Info("File %s was successfully downloaded", fileName)
 			file.FileWriter.Stop()
 			delete(n.forDownload.M, fileName)
-			return
+			continue
 		}
 
 		missingChunks := file.GetMissingChunks()
+
+		// Sort missing chunks by rarity
+		sort.Slice(missingChunks, func(i, j int) bool {
+			missingChunkI := uint16(missingChunks[i])
+			missingChunkJ := uint16(missingChunks[j])
+
+			return file.GetNumberOfNodesWhichHaveChunk(missingChunkI) < file.GetNumberOfNodesWhichHaveChunk(missingChunkJ)
+		})
 
 		file.Nodes.ForEach(func(nodeAddrString string, nodeInfo *NodeInfo) {
 			missingChunksPerNode := make([]uint16, 0)
