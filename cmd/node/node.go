@@ -2,6 +2,7 @@ package main
 
 import (
 	"PessiTorrent/internal/cli"
+	"PessiTorrent/internal/dns"
 	"PessiTorrent/internal/logger"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/structures"
@@ -12,6 +13,8 @@ import (
 )
 
 type Node struct {
+  dns *dns.DNS
+
 	trackerAddr string
 	udpPort     uint16
 	connected   bool // Whether the node is connected to the tracker or not
@@ -27,8 +30,10 @@ type Node struct {
 	quitChannel chan struct{}
 }
 
-func NewNode(trackerAddr string, udpPort uint16) Node {
+func NewNode(trackerAddr string, udpPort uint16, dnsAddr string) Node {
 	return Node{
+    dns: dns.NewDNS(dnsAddr),
+
 		trackerAddr: trackerAddr,
 		udpPort:     udpPort,
 
@@ -64,7 +69,13 @@ func (n *Node) startTCP() {
 
 	// Notify tracker of node's existence
 	ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
-	packet := protocol.NewInitPacket(ipAddr, n.udpPort)
+	domain, err := n.dns.ResolveDomain(net.IP(ipAddr[:]).String())
+	if err != nil {
+    logger.Error("Error resolving domain: %v", err)
+    return
+	}
+
+	packet := protocol.NewInitPacket(domain, n.udpPort)
 	n.conn.EnqueuePacket(&packet)
 }
 

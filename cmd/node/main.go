@@ -14,6 +14,7 @@ func main() {
 		return
 	}
 
+  dns := cfg.DNS.Host + ":" + strconv.FormatUint(uint64(cfg.DNS.Port), 10) 
 	trackerAddr := cfg.Tracker.Host + ":" + strconv.Itoa(int(cfg.Tracker.Port))
 	udpPort := cfg.Node.Port
 
@@ -21,6 +22,6 @@ func main() {
 	flag.UintVar(&udpPort, "p", udpPort, "Node UDP port")
 	flag.Parse()
 
-	node := NewNode(trackerAddr, uint16(udpPort))
+	node := NewNode(trackerAddr, uint16(udpPort), dns)
 	node.Start()
 }
