@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -60,6 +61,7 @@ func (n *Node) handleAnswerFileWithNodesPacket(packet *protocol.AnswerFileWithNo
 
 	for _, node := range packet.Nodes {
 		ipAddrStr, _ := n.dns.ResolveIP(node.Name)
+    ipAddrStr = ipAddrStr + ":" + strconv.Itoa(int(node.Port))
 		ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
 
 		if err != nil {
@@ -94,7 +96,8 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 
 	for _, node := range packet.Nodes {
 		ipAddrStr, _ := n.dns.ResolveIP(node.Name)
-		ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
+    ipAddrStr = ipAddrStr + ":" + strconv.Itoa(int(node.Port))
+    ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
 
 		if err != nil {
 			logger.Error("Error resolving domain %s: %v", node.Name, err)

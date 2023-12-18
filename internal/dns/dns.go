@@ -1,7 +1,6 @@
 package dns
 
 import (
-	"PessiTorrent/internal/logger"
 	"context"
 	"net"
 )
@@ -28,7 +27,6 @@ func (dns *DNS) ResolveIP(domain string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	logger.Info("IPs: %v", ips)
 
 	// Return the first IP address
 	return ips[0], nil
