@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	Permissions     = 0666
-	Flags           = os.O_WRONLY | os.O_CREATE
+	Permissions = 0666
+	Flags       = os.O_WRONLY | os.O_CREATE
 
 	WorkerPoolSize = 10
 )
@@ -30,7 +30,7 @@ type Chunk struct {
 }
 
 func NewFileWriter(fileName string, fileSize uint64, onWrite func(index uint16), downloadsFolder string) (*FileWriter, error) {
-	path := downloadsFolder + "/" + fileName
+	path := downloadsFolder + fileName
 
 	// Create sparse file
 	file, err := os.OpenFile(path, Flags, Permissions)

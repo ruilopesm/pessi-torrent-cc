@@ -26,7 +26,7 @@ func NewFile(fileName string, path string) File {
 
 type ForDownloadFile struct {
 	FileName   string
-  FilePath   string
+	FilePath   string
 	FileHash   [20]byte
 	FileSize   uint64
 	FileWriter *filewriter.FileWriter

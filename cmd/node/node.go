@@ -34,7 +34,7 @@ type Node struct {
 	pending        structures.SynchronizedMap[string, *File]
 	forDownload    structures.SynchronizedMap[string, *ForDownloadFile]
 	downloadedFile structures.SynchronizedMap[string, *File]
-  downloadPath   string
+	downloadPath   string
 
 	nodeStatistics *NodeStatistics
 
@@ -46,10 +46,10 @@ func NewNode(trackerAddr string, udpPort uint16) Node {
 		trackerAddr: trackerAddr,
 		udpPort:     udpPort,
 
-		pending:     structures.NewSynchronizedMap[string, *File](),
-		published:   structures.NewSynchronizedMap[string, *File](),
-		forDownload: structures.NewSynchronizedMap[string, *ForDownloadFile](),
-    downloadPath: "./downloads",
+		pending:      structures.NewSynchronizedMap[string, *File](),
+		published:    structures.NewSynchronizedMap[string, *File](),
+		forDownload:  structures.NewSynchronizedMap[string, *ForDownloadFile](),
+		downloadPath: "./downloads",
 
 		nodeStatistics: NewNodeStatistics(),
 

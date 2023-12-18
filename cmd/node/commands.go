@@ -135,7 +135,7 @@ func (n *Node) status(_ []string) error {
 		})
 	}
 
-  logger.Info("Download path: %s", n.downloadPath)
+	logger.Info("Download path: %s", n.downloadPath)
 
 	return nil
 }
@@ -150,20 +150,24 @@ func (n *Node) removeFile(args []string) error {
 	return nil
 }
 
-
 // path <path>
 func (n *Node) setDownloadPath(args []string) error {
-  path := args[0]
+	path := args[0]
 
-  _, err := os.Stat(path)
-  if err != nil {
-    logger.Info("Path %s does not exist", path)
-    return err
-  }
+	_, err := os.Stat(path)
+	if err != nil {
+		logger.Info("Path %s does not exist", path)
+		return err
+	}
 
-  n.downloadPath = path
+	// verify if path has a trailing slash
+	if path[len(path)-1] != '/' {
+		path += "/"
+	}
 
-  return nil
+	n.downloadPath = path
+
+	return nil
 }
 
 // statistics
