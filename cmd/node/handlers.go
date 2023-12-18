@@ -79,7 +79,7 @@ func (n *Node) handleAnswerFileWithNodesPacket(packet *protocol.AnswerFileWithNo
 		}
 	}
 
-	logger.Info("File %s information internally updated. Run 'status' in order to check for downloading files", packet.FileName)
+	logger.Info("File %s information internally updated.", packet.FileName)
 }
 
 // Handler for when a node request, to the tracker, updated information about nodes who have a file
@@ -112,7 +112,7 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 		}
 	}
 
-	logger.Info("File %s information internally updated. Run 'status' in order to check for downloading files", packet.FileName)
+	logger.Info("File %s information internally updated.", packet.FileName)
 }
 
 // Handler for when a node publishes/removes a file in/from the network
@@ -178,6 +178,16 @@ func (n *Node) handleChunkPacket(packet *protocol.ChunkPacket, addr *net.UDPAddr
 		if b && requested != (time.Time{}) {
 			n.nodeStatistics.addDownloadedChunk(addr.String(), uint64(len(packet.ChunkContent)), requested, time.Now())
 		}
+	}
+
+	downloadedChunksSize := float64(int(forDownloadFile.NumberOfChunks) - forDownloadFile.LengthOfMissingChunks())
+	percentage := downloadedChunksSize / float64(forDownloadFile.NumberOfChunks) * 100
+	newPercentage := (downloadedChunksSize + 1) / float64(forDownloadFile.NumberOfChunks) * 100
+
+	const AnouncePercentageInterval = 10
+
+	if int(newPercentage/AnouncePercentageInterval) != int(percentage/AnouncePercentageInterval) {
+		logger.Info("File %s download progress: (%.1f%%)", packet.FileName, newPercentage)
 	}
 
 	// Write chunk to file

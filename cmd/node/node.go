@@ -166,9 +166,11 @@ func (n *Node) tick() {
 			n.updateServerChunks(file)
 			logger.Info("Sent update chunks packet to tracker for file %s", fileName)
 
-			// Also request to update our nodes info about the file
-			packet := protocol.NewUpdateFilePacket(fileName)
-			n.conn.EnqueuePacket(&packet)
+			if !file.IsFileDownloaded() { // If file is downloaded, we don't need to update the nodes with the file
+				// Also request to update our nodes info about the file
+				packet := protocol.NewUpdateFilePacket(fileName)
+				n.conn.EnqueuePacket(&packet)
+			}
 		}
 
 		if file.IsFileDownloaded() {
