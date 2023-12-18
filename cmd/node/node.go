@@ -21,6 +21,7 @@ const (
 	MaxTriesPerChunk            = 3
 	MaxNodeTimeouts             = 3
 	TickInterval                = 100 * time.Millisecond
+	DefaultDownloadDirectory    = "downloads"
 )
 
 type Node struct {
@@ -38,7 +39,8 @@ type Node struct {
 	pending        structures.SynchronizedMap[string, *File]
 	forDownload    structures.SynchronizedMap[string, *ForDownloadFile]
 	downloadedFile structures.SynchronizedMap[string, *File]
-	downloadPath   string
+
+	downloadDirectory string
 
 	nodeStatistics *NodeStatistics
 
@@ -52,10 +54,11 @@ func NewNode(trackerAddr string, udpPort uint16, dnsAddr string) Node {
 		trackerAddr: trackerAddr,
 		udpPort:     udpPort,
 
-		pending:      structures.NewSynchronizedMap[string, *File](),
-		published:    structures.NewSynchronizedMap[string, *File](),
-		forDownload:  structures.NewSynchronizedMap[string, *ForDownloadFile](),
-		downloadPath: "./downloads",
+		pending:     structures.NewSynchronizedMap[string, *File](),
+		published:   structures.NewSynchronizedMap[string, *File](),
+		forDownload: structures.NewSynchronizedMap[string, *ForDownloadFile](),
+
+		downloadDirectory: DefaultDownloadDirectory,
 
 		nodeStatistics: NewNodeStatistics(),
 
@@ -126,7 +129,7 @@ func (n *Node) startCLI() {
 	c.AddCommand("request", "<file name>", "", 1, n.requestFile)
 	c.AddCommand("status", "", "Show the status of the node", 0, n.status)
 	c.AddCommand("statistics", "", "Show the statistics of the node", 0, n.statistics)
-	c.AddCommand("path", "<download folder path>", "Set download path", 1, n.setDownloadPath)
+	c.AddCommand("set-downloads", "<directory>", "Set download directory path", 1, n.setDownloadDirectory)
 	c.AddCommand("remove", "<file name>", "", 1, n.removeFile)
 	c.Start()
 }
@@ -204,20 +207,23 @@ func (n *Node) tick() {
 				chunk := missingChunks[0]
 				missingChunks = missingChunks[1:] // Pop first element
 
-				requestInfo, ok := nodeInfo.Chunks.Get(uint16(chunk))
+				requestInfo, _ := nodeInfo.Chunks.Get(uint16(chunk))
 
-				if time.Now().Sub(requestInfo.TimeLastRequested) >= ChunkRequestTimeoutDuration || !ok {
-					requestInfo.NumberOfTries++
-					if requestInfo.NumberOfTries >= MaxTriesPerChunk {
-						logger.Warn("Node %s is not responding.", nodeInfo.Address)
-						nodeInfo.Timeouts++
-						if nodeInfo.Timeouts >= MaxNodeTimeouts {
-							logger.Warn("Node %s has timed out 3 times. Removing it from file %s", nodeInfo.Address, file.FileName)
-							file.Nodes.Delete(nodeInfo.Address)
-						}
-					} else {
-						chunksToRequest[nodeInfo] = append(chunksToRequest[nodeInfo], uint16(chunk)) // Queue chunk
+				lastRequested, ok := file.PendingChunks.Get(uint16(chunk)) // Check if chunk has already been requested
+				if ok && time.Now().Sub(lastRequested) < ChunkRequestTimeoutDuration {
+					continue
+				}
+
+				requestInfo.NumberOfTries++
+				if requestInfo.NumberOfTries >= MaxTriesPerChunk {
+					logger.Warn("Node %s is not responding.", nodeInfo.Address)
+					nodeInfo.Timeouts++
+					if nodeInfo.Timeouts >= MaxNodeTimeouts {
+						logger.Warn("Node %s has timed out 3 times. Removing it from file %s", nodeInfo.Address, file.FileName)
+						file.Nodes.Delete(nodeInfo.Address)
 					}
+				} else {
+					chunksToRequest[nodeInfo] = append(chunksToRequest[nodeInfo], uint16(chunk)) // Queue chunk
 				}
 			}
 		}

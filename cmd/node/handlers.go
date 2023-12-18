@@ -50,7 +50,7 @@ func (n *Node) handleAnswerFileWithNodesPacket(packet *protocol.AnswerFileWithNo
 
 	logger.Info("Updating nodes who have chunks for file %s", packet.FileName)
 
-	err := forDownloadFile.SetData(packet.FileHash, packet.ChunkHashes, packet.FileSize, uint16(len(packet.ChunkHashes)), n.downloadPath)
+	err := forDownloadFile.SetData(packet.FileHash, packet.ChunkHashes, packet.FileSize, uint16(len(packet.ChunkHashes)), n.downloadDirectory)
 	if err != nil {
 		logger.Error("Error setting data for file %s: %v", packet.FileName, err)
 		return
