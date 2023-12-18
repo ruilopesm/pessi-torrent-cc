@@ -50,7 +50,7 @@ func (n *Node) handleAnswerFileWithNodesPacket(packet *protocol.AnswerFileWithNo
 
 	logger.Info("Updating nodes who have chunks for file %s", packet.FileName)
 
-	err := forDownloadFile.SetData(packet.FileHash, packet.ChunkHashes, packet.FileSize, uint16(len(packet.ChunkHashes)))
+	err := forDownloadFile.SetData(packet.FileHash, packet.ChunkHashes, packet.FileSize, uint16(len(packet.ChunkHashes)), n.downloadPath)
 	if err != nil {
 		logger.Error("Error setting data for file %s: %v", packet.FileName, err)
 		return
@@ -176,10 +176,23 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 	publishedFile, ok := n.published.Get(packet.FileName)
 	if !ok {
 		logger.Warn("File %s not found in published files", packet.FileName)
-		// TODO: Find file in downloaded files or being downloaded files
+
+		downloadFile, ok := n.forDownload.Get(packet.FileName)
+		if !ok {
+			logger.Warn("File %s not found in forDownload files", packet.FileName)
+			return
+		}
+
+		file := NewFile(packet.FileName, downloadFile.FilePath)
+		n.sendFileChunks(&file, packet, addr)
+
 		return
 	}
 
+	n.sendFileChunks(publishedFile, packet, addr)
+}
+
+func (n *Node) sendFileChunks(publishedFile *File, packet *protocol.RequestChunksPacket, addr *net.UDPAddr) {
 	// Open file by the given path
 	file, err := os.Open(publishedFile.Path)
 	if err != nil {
