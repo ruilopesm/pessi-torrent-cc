@@ -1,17 +1,19 @@
 package protocol
 
 const (
-	InitType          = 0
-	PublishFileType   = 1
-	FileSuccessType   = 2
-	AlreadyExistsType = 3
-	NotFoundType      = 4
-	UpdateChunksType  = 5
-	RequestFileType   = 6
-	AnswerNodesType   = 7
-	RemoveFileType    = 8
-	RequestChunksType = 9
-	ChunkType         = 10
+	InitType                = 0
+	PublishFileType         = 1
+	FileSuccessType         = 2
+	AlreadyExistsType       = 3
+	NotFoundType            = 4
+	UpdateChunksType        = 5
+	RequestFileType         = 6
+	UpdateFileType          = 7
+	AnswerFileWithNodesType = 8
+	AnswerNodesType         = 9
+	RemoveFileType          = 10
+	RequestChunksType       = 11
+	ChunkType               = 12
 )
 
 type Packet interface {
@@ -34,6 +36,10 @@ func PacketStructFromType(packetType uint8) Packet {
 		return &UpdateChunksPacket{}
 	case RequestFileType:
 		return &RequestFilePacket{}
+	case UpdateFileType:
+		return &UpdateFilePacket{}
+	case AnswerFileWithNodesType:
+		return &AnswerFileWithNodesPacket{}
 	case AnswerNodesType:
 		return &AnswerNodesPacket{}
 	case RemoveFileType:

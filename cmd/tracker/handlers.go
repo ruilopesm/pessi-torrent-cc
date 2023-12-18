@@ -15,6 +15,8 @@ func (t *Tracker) HandlePackets(packet protocol.Packet, conn *transport.TCPConne
 		t.handlePublishFilePacket(packet, conn)
 	case *protocol.RequestFilePacket:
 		t.handleRequestFilePacket(packet, conn)
+	case *protocol.UpdateFilePacket:
+		t.handleUpdateFilePacket(packet, conn)
 	case *protocol.RemoveFilePacket:
 		t.handleRemoveFilePacket(packet, conn)
 	case *protocol.UpdateChunksPacket:
@@ -77,13 +79,35 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 		})
 
 		// Send file name, hash and chunks hashes
-		anPacket := protocol.NewAnswerNodesPacket(file.FileName, file.FileSize, file.FileHash, file.ChunkHashes, ipAddrs, ports, bitfields)
+		anPacket := protocol.NewAnswerFileWithNodesPacket(file.FileName, file.FileSize, file.FileHash, file.ChunkHashes, ipAddrs, ports, bitfields)
 		conn.EnqueuePacket(&anPacket)
 	} else {
 		logger.Info("File %s requested from %s does not exist", packet.FileName, conn.RemoteAddr())
 
 		nfPacket := protocol.NewNotFoundPacket(packet.FileName)
 		conn.EnqueuePacket(&nfPacket)
+	}
+}
+
+func (t *Tracker) handleUpdateFilePacket(packet *protocol.UpdateFilePacket, conn *transport.TCPConnection) {
+	logger.Info("Update file packet received from %s", conn.RemoteAddr())
+
+	if file, ok := t.files.Get(packet.FileName); ok {
+		var ipAddrs [][4]byte
+		var ports []uint16
+		var bitfields []protocol.Bitfield
+
+		t.nodes.ForEach(func(_ string, node *NodeInfo) {
+			if bitfield, exists := node.files.Get(packet.FileName); exists {
+				ipAddrs = append(ipAddrs, utils.TCPAddrToBytes(node.conn.RemoteAddr()))
+				ports = append(ports, node.udpPort)
+				bitfields = append(bitfields, bitfield)
+			}
+		})
+
+		// Send file name, hash and chunks hashes
+		anPacket := protocol.NewAnswerNodesPacket(file.FileName, ipAddrs, ports, bitfields)
+		conn.EnqueuePacket(&anPacket)
 	}
 }
 
