@@ -23,14 +23,16 @@ func NewTrackedFile(fileName string, fileSize uint64, fileHash [20]byte, chunkHa
 }
 
 type NodeInfo struct {
+	name    string
 	conn    transport.TCPConnection
 	udpPort uint16
 
 	files structures.SynchronizedMap[string, protocol.Bitfield]
 }
 
-func NewNodeInfo(conn transport.TCPConnection, udpPort uint16) NodeInfo {
+func NewNodeInfo(conn transport.TCPConnection, udpPort uint16, name string) NodeInfo {
 	return NodeInfo{
+		name:    name,
 		conn:    conn,
 		udpPort: udpPort,
 		files:   structures.NewSynchronizedMap[string, protocol.Bitfield](),

@@ -1,16 +1,18 @@
 package protocol
 
+// TODO: Change the packets that send IP addresses to send domain names instead
+
 // NODE -> TRACKER
 
 // InitPacket is sent by the node to the tracker when it starts
 type InitPacket struct {
-	IPAddr  [4]byte
+	Name    string
 	UDPPort uint16
 }
 
-func NewInitPacket(ipAddr [4]byte, udpPort uint16) InitPacket {
+func NewInitPacket(name string, udpPort uint16) InitPacket {
 	return InitPacket{
-		IPAddr:  ipAddr,
+		Name:    name,
 		UDPPort: udpPort,
 	}
 }
@@ -153,12 +155,12 @@ type AnswerFileWithNodesPacket struct {
 }
 
 type NodeFileInfo struct {
-	IPAddr   [4]byte
+	Name     string
 	Port     uint16
 	Bitfield []uint8
 }
 
-func NewAnswerFileWithNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte, ipAddrs [][4]byte, ports []uint16, bitfields []Bitfield) AnswerFileWithNodesPacket {
+func NewAnswerFileWithNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte, names []string, ports []uint16, bitfields []Bitfield) AnswerFileWithNodesPacket {
 	an := AnswerFileWithNodesPacket{
 		FileName:    fileName,
 		FileSize:    fileSize,
@@ -170,7 +172,7 @@ func NewAnswerFileWithNodesPacket(fileName string, fileSize uint64, fileHash [20
 		bitfield := bitfields[i]
 
 		node := NodeFileInfo{
-			IPAddr:   ipAddrs[i],
+			Name:     names[i],
 			Port:     ports[i],
 			Bitfield: bitfield,
 		}
@@ -189,7 +191,7 @@ type AnswerNodesPacket struct {
 	Nodes    []NodeFileInfo
 }
 
-func NewAnswerNodesPacket(fileName string, ipAddrs [][4]byte, ports []uint16, bitfields []Bitfield) AnswerNodesPacket {
+func NewAnswerNodesPacket(fileName string, names []string, ports []uint16, bitfields []Bitfield) AnswerNodesPacket {
 	an := AnswerNodesPacket{
 		FileName: fileName,
 	}
@@ -198,7 +200,7 @@ func NewAnswerNodesPacket(fileName string, ipAddrs [][4]byte, ports []uint16, bi
 		bitfield := bitfields[i]
 
 		node := NodeFileInfo{
-			IPAddr:   ipAddrs[i],
+			Name:     names[i],
 			Port:     ports[i],
 			Bitfield: bitfield,
 		}

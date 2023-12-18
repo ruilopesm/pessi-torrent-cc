@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Function to copy files
+copy_file() {
+    if [ -f "$1" ]; then
+        cp "$1" "$2"
+        echo "Copied $1 to $2"
+    else
+        echo "Error: $1 does not exist."
+    fi
+}
+
+# Function to set server-specific paths
+set_server_paths() {
+    options_source="./topologies/named.conf.options"
+    local_source="./topologies/ns${1}.named.conf.local"
+    local_zone_source="./topologies/local.zone"
+    reverse_zone_source="./topologies/reverse.zone"
+
+    options_destination="/etc/bind/named.conf.options"
+    local_destination="/etc/bind/named.conf.local"
+    local_zone_destination="/etc/bind/local.zone"
+    reverse_zone_destination="/etc/bind/reverse.zone"
+}
+
+# Copy files for the specified server number
+copy_files() {
+    set_server_paths "$1"
+
+    # Copy named.conf.options
+    copy_file "$options_source" "$options_destination"
+
+    # Copy named.conf.local
+    copy_file "$local_source" "$local_destination"
+
+    # Copy local.zone
+    copy_file "$local_zone_source" "$local_zone_destination"
+
+    # Copy reverse.zone
+    copy_file "$reverse_zone_source" "$reverse_zone_destination"
+}
+
+# Start the bind9 service
+if [ $# -eq 2 ]; then
+    server_number="$1"
+    command_type="$2"
+
+    copy_files "$server_number"
+
+    if [ "$command_type" == "named" ]; then
+        echo "bind9 running..."
+        /usr/sbin/named -f -c /etc/bind/named.conf -u bind
+    elif [ "$command_type" == "systemd" ]; then
+        echo "Restarting bind9..."
+        sudo systemctl restart bind9
+    else
+        echo "Invalid command type. Usage: $0 <server_number> [named|systemd]"
+    fi
+else
+    echo "Invalid number of arguments. Usage: $0 <server_number> [named|systemd]"
+fi

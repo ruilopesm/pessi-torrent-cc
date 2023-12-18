@@ -1,0 +1,11 @@
+zone "local" {
+    type slave;
+    file "/etc/bind/local.zone";
+    masters { 10.4.4.1; };
+};
+
+zone "10.in-addr.arpa" {
+    type slave;
+    file "/etc/bind/reverse.zone";
+    masters { 10.4.4.1; };
+};

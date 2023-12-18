@@ -1,0 +1,13 @@
+zone "local" {
+    type master;
+    file "/etc/bind/local.zone";
+    allow-transfer { 10.4.4.10; };
+    also-notify { 10.4.4.10; };
+};
+
+zone "10.in-addr.arpa" {
+    type master;
+    file "/etc/bind/reverse.zone";
+    allow-transfer { 10.4.4.10; };
+    also-notify { 10.4.4.10; };
+};

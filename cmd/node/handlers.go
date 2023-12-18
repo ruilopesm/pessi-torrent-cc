@@ -59,14 +59,22 @@ func (n *Node) handleAnswerFileWithNodesPacket(packet *protocol.AnswerFileWithNo
 	forDownloadFile.UpdatedByTracker = true
 
 	for _, node := range packet.Nodes {
+		ipAddrStr, _ := n.dns.ResolveIP(node.Name)
+		ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
+
+		if err != nil {
+			logger.Error("Error resolving domain %s: %v", node.Name, err)
+			continue
+		}
+
 		udpAddr := net.UDPAddr{
-			IP:   node.IPAddr[:],
+			IP:   ipAddr.IP,
 			Port: int(node.Port),
 		}
 
-		ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
+		localIpAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
 
-		if n.udpPort != node.Port || ipAddr != node.IPAddr { // Do not add itself to the list of nodes
+		if n.udpPort != node.Port || localIpAddr != [4]byte(ipAddr.IP) { // Do not add itself to the list of nodes
 			forDownloadFile.AddNode(&udpAddr, node.Bitfield)
 		}
 	}
@@ -85,14 +93,21 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 	logger.Info("Updating nodes who have chunks for file %s", packet.FileName)
 
 	for _, node := range packet.Nodes {
+		ipAddrStr, _ := n.dns.ResolveIP(node.Name)
+		ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
+
+		if err != nil {
+			logger.Error("Error resolving domain %s: %v", node.Name, err)
+			continue
+		}
 		udpAddr := net.UDPAddr{
-			IP:   node.IPAddr[:],
+			IP:   ipAddr.IP,
 			Port: int(node.Port),
 		}
 
-		ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
+		localIPAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
 
-		if n.udpPort != node.Port || ipAddr != node.IPAddr { // Do not add itself to the list of nodes
+		if n.udpPort != node.Port || localIPAddr != [4]byte(ipAddr.IP) { // Do not add itself to the list of nodes
 			forDownloadFile.AddNode(&udpAddr, node.Bitfield)
 		}
 	}
