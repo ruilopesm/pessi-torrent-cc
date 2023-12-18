@@ -19,6 +19,7 @@ const (
 	ChunkRequestTimeoutDuration = 500 * time.Millisecond
 	MaxTriesPerChunk            = 3
 	MaxNodeTimeouts             = 3
+	TickInterval                = 100 * time.Millisecond
 )
 
 type Node struct {
@@ -117,7 +118,7 @@ func (n *Node) startCLI() {
 }
 
 func (n *Node) startTicker() {
-	tck := ticker.NewTicker(n.tick)
+	tck := ticker.NewTicker(TickInterval, n.tick)
 	tck.Start()
 	n.tck = tck
 }
