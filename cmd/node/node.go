@@ -50,7 +50,6 @@ func NewNode(trackerAddr string, udpPort uint16) Node {
 		pending:        structures.NewSynchronizedMap[string, *File](),
 		published:      structures.NewSynchronizedMap[string, *File](),
 		forDownload:    structures.NewSynchronizedMap[string, *ForDownloadFile](),
-    downloadedFile: structures.NewSynchronizedMap[string, *File](),
 		downloadPath:   "./downloads",
 
 		nodeStatistics: NewNodeStatistics(),
@@ -163,8 +162,8 @@ func (n *Node) tick() {
 			logger.Info("File %s was successfully downloaded in %s", fileName, timeToDownload.String())
 			file.FileWriter.Stop()
 
-      file := NewFile(file.FileName, file.FilePath)
-      n.downloadedFile.Put(file.FileName, &file)
+      newFile := NewFile(file.FileName, file.FilePath)
+      n.published.Put(file.FileName, &newFile)
 
 			delete(n.forDownload.M, fileName)
 			continue
