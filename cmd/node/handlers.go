@@ -61,7 +61,7 @@ func (n *Node) handleAnswerFileWithNodesPacket(packet *protocol.AnswerFileWithNo
 
 	for _, node := range packet.Nodes {
 		ipAddrStr, _ := n.dns.ResolveIP(node.Name)
-    ipAddrStr = ipAddrStr + ":" + strconv.Itoa(int(node.Port))
+		ipAddrStr = ipAddrStr + ":" + strconv.Itoa(int(node.Port))
 		ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
 
 		if err != nil {
@@ -96,9 +96,8 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 
 	for _, node := range packet.Nodes {
 		ipAddrStr, _ := n.dns.ResolveIP(node.Name)
-    ipAddrStr = ipAddrStr + ":" + strconv.Itoa(int(node.Port))
-    ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
-
+		ipAddrStr = ipAddrStr + ":" + strconv.Itoa(int(node.Port))
+		ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
 		if err != nil {
 			logger.Error("Error resolving domain %s: %v", node.Name, err)
 			continue
@@ -107,10 +106,9 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 			IP:   ipAddr.IP,
 			Port: int(node.Port),
 		}
+		localIpAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
 
-		localIPAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
-
-		if n.udpPort != node.Port || localIPAddr != [4]byte(ipAddr.IP) { // Do not add itself to the list of nodes
+		if n.udpPort != node.Port || localIpAddr != [4]byte(ipAddr.IP) { // Do not add itself to the list of nodes
 			forDownloadFile.AddNode(&udpAddr, node.Bitfield)
 		}
 	}
