@@ -25,6 +25,8 @@ func NewFile(fileName string, path string) File {
 }
 
 type ForDownloadFile struct {
+	UpdatedByTracker bool // Whether the tracker has already sent the file info or not
+
 	FileName   string
 	FileHash   [20]byte
 	FileSize   uint64
@@ -59,12 +61,15 @@ type RequestInfo struct {
 
 func NewForDownloadFile(fileName string) *ForDownloadFile {
 	return &ForDownloadFile{
+		UpdatedByTracker:       false,
 		FileName:               fileName,
 		LastServerChunksUpdate: time.Now(),
 	}
 }
 
 func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fileSize uint64, numberOfChunks uint16) error {
+	f.UpdatedByTracker = true
+
 	f.FileHash = fileHash
 	f.FileSize = fileSize
 	fileWriter, err := filewriter.NewFileWriter(f.FileName, fileSize, f.MarkChunkAsDownloaded)

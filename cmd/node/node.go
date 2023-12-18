@@ -145,6 +145,10 @@ func (n *Node) tick() {
 	defer n.forDownload.Unlock()
 
 	for fileName, file := range n.forDownload.M {
+		if !file.UpdatedByTracker {
+			continue
+		}
+
 		if time.Now().Sub(file.LastServerChunksUpdate) > UpdateServerChunksInterval || file.IsFileDownloaded() {
 			file.LastServerChunksUpdate = time.Now()
 			n.updateServerChunks(file)
