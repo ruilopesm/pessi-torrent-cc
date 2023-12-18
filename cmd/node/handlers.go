@@ -9,10 +9,13 @@ import (
 	"io"
 	"net"
 	"os"
+	"time"
 )
 
 func (n *Node) HandlePackets(packet protocol.Packet, conn *transport.TCPConnection) {
 	switch packet := packet.(type) {
+	case *protocol.AnswerFileWithNodesPacket:
+		n.handleAnswerFileWithNodesPacket(packet, conn)
 	case *protocol.AnswerNodesPacket:
 		n.handleAnswerNodesPacket(packet, conn)
 	case *protocol.FileSuccessPacket:
@@ -37,22 +40,23 @@ func (n *Node) HandleUDPPackets(packet protocol.Packet, addr *net.UDPAddr) {
 	}
 }
 
-// Handler for when a node requests, to the tracker, the list of nodes who have a specific file
-func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn *transport.TCPConnection) {
-	logger.Info("Answer nodes packet received from %s", conn.RemoteAddr())
-
+// Handler for when a node requests, to the tracker, a file
+func (n *Node) handleAnswerFileWithNodesPacket(packet *protocol.AnswerFileWithNodesPacket, conn *transport.TCPConnection) {
 	// Update file in forDownload data structure
 	forDownloadFile, ok := n.forDownload.Get(packet.FileName)
 	if !ok {
-		logger.Warn("File %s not found in forDownload files", packet.FileName)
-		return
+		return // File was removed from forDownload files
 	}
 
-	err := forDownloadFile.SetData(packet.FileHash, packet.ChunkHashes, packet.FileSize, uint16(len(packet.ChunkHashes)))
+	logger.Info("Updating nodes who have chunks for file %s", packet.FileName)
+
+	err := forDownloadFile.SetData(packet.FileHash, packet.ChunkHashes, packet.FileSize, uint16(len(packet.ChunkHashes)), n.downloadPath)
 	if err != nil {
 		logger.Error("Error setting data for file %s: %v", packet.FileName, err)
 		return
 	}
+	forDownloadFile.DownloadStarted = time.Now()
+	forDownloadFile.UpdatedByTracker = true
 
 	for _, node := range packet.Nodes {
 		ipAddrStr, _ := n.dns.ResolveDomain(node.Name)
@@ -67,7 +71,45 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 			IP:   ipAddr.IP,
 			Port: int(node.Port),
 		}
-		forDownloadFile.AddNode(&udpAddr, node.Bitfield)
+
+		localIpAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
+
+		if n.udpPort != node.Port || localIpAddr != [4]byte(ipAddr.IP) { // Do not add itself to the list of nodes
+			forDownloadFile.AddNode(&udpAddr, node.Bitfield)
+		}
+	}
+
+	logger.Info("File %s information internally updated. Run 'status' in order to check for downloading files", packet.FileName)
+}
+
+// Handler for when a node request, to the tracker, updated information about nodes who have a file
+func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn *transport.TCPConnection) {
+	// Update file in forDownload data structure
+	forDownloadFile, ok := n.forDownload.Get(packet.FileName)
+	if !ok {
+		return // File was removed from forDownload files
+	}
+
+	logger.Info("Updating nodes who have chunks for file %s", packet.FileName)
+
+	for _, node := range packet.Nodes {
+		ipAddrStr, _ := n.dns.ResolveDomain(node.Name)
+		ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
+
+		if err != nil {
+			logger.Error("Error resolving domain %s: %v", node.Name, err)
+			continue
+		}
+		udpAddr := net.UDPAddr{
+			IP:   ipAddr.IP,
+			Port: int(node.Port),
+		}
+
+		localIPAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
+
+		if n.udpPort != node.Port || localIPAddr != [4]byte(ipAddr.IP) { // Do not add itself to the list of nodes
+			forDownloadFile.AddNode(&udpAddr, node.Bitfield)
+		}
 	}
 
 	logger.Info("File %s information internally updated. Run 'status' in order to check for downloading files", packet.FileName)
@@ -124,7 +166,18 @@ func (n *Node) handleChunkPacket(packet *protocol.ChunkPacket, addr *net.UDPAddr
 
 	// Discard packet if hash of chunk is not correct
 	if forDownloadFile.GetChunkHash(packet.Chunk) != utils.HashChunk(packet.ChunkContent) {
+		logger.Warn("Received incorrect hash of chunk %d of file %s", packet.Chunk, packet.FileName)
 		return
+	}
+
+	nodeInfo, ok := forDownloadFile.Nodes.Get(addr.String())
+	if !ok {
+		logger.Warn("Node %s sent unrequested chunk from file %s", addr, packet.FileName)
+	} else {
+		requested, b := nodeInfo.GetLastTimeChunkWasRequested(packet.Chunk)
+		if b && requested != (time.Time{}) {
+			n.nodeStatistics.addDownloadedChunk(addr.String(), uint64(len(packet.ChunkContent)), requested, time.Now())
+		}
 	}
 
 	// Write chunk to file
@@ -138,9 +191,23 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 	publishedFile, ok := n.published.Get(packet.FileName)
 	if !ok {
 		logger.Warn("File %s not found in published files", packet.FileName)
+
+		downloadFile, ok := n.forDownload.Get(packet.FileName)
+		if !ok {
+			logger.Warn("File %s not found in forDownload files", packet.FileName)
+			return
+		}
+
+		file := NewFile(packet.FileName, downloadFile.FilePath)
+		n.sendFileChunks(&file, packet, addr)
+
 		return
 	}
 
+	n.sendFileChunks(publishedFile, packet, addr)
+}
+
+func (n *Node) sendFileChunks(publishedFile *File, packet *protocol.RequestChunksPacket, addr *net.UDPAddr) {
 	// Open file by the given path
 	file, err := os.Open(publishedFile.Path)
 	if err != nil {
@@ -173,5 +240,6 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 		// Send chunk bytes
 		packet := protocol.NewChunkPacket(packet.FileName, chunk, chunkContent[:read])
 		n.srv.SendPacket(&packet, addr)
+		n.nodeStatistics.addUploadedBytes(chunkSize)
 	}
 }

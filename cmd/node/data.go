@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	ChunkTimeout = 3 * time.Second
+	ChunkTimeout = 500 * time.Millisecond
 )
 
 type File struct {
@@ -25,15 +25,25 @@ func NewFile(fileName string, path string) File {
 }
 
 type ForDownloadFile struct {
+	// Whether the tracker has already sent the file info or not
+	UpdatedByTracker bool
+
+	// Timestamp of when the download started
+	DownloadStarted time.Time
+
 	FileName   string
+	FilePath   string
 	FileHash   [20]byte
 	FileSize   uint64
 	FileWriter *filewriter.FileWriter
 
+	// Last time the node sent a UpdateChunksPacket to the tracker
+	LastServerChunksUpdate time.Time
+
 	NumberOfChunks uint16
 	Chunks         structures.SynchronizedList[ChunkInfo]
 
-	Nodes structures.SynchronizedMap[*net.UDPAddr, *NodeInfo]
+	Nodes structures.SynchronizedMap[string, *NodeInfo]
 }
 
 type ChunkInfo struct {
@@ -43,20 +53,30 @@ type ChunkInfo struct {
 }
 
 type NodeInfo struct {
+	Address string
 	// Chunk index -> Last time chunk was requested
-	Chunks structures.SynchronizedMap[uint16, time.Time]
+	Chunks   structures.SynchronizedMap[uint16, *RequestInfo]
+	Timeouts uint
+}
+
+type RequestInfo struct {
+	TimeLastRequested time.Time
+	NumberOfTries     uint
 }
 
 func NewForDownloadFile(fileName string) *ForDownloadFile {
 	return &ForDownloadFile{
-		FileName: fileName,
+		UpdatedByTracker:       false,
+		FileName:               fileName,
+		LastServerChunksUpdate: time.Now(),
 	}
 }
 
-func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fileSize uint64, numberOfChunks uint16) error {
+func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fileSize uint64, numberOfChunks uint16, downloadPath string) error {
 	f.FileHash = fileHash
 	f.FileSize = fileSize
-	fileWriter, err := filewriter.NewFileWriter(f.FileName, fileSize, f.MarkChunkAsDownloaded)
+	f.FilePath = downloadPath + f.FileName
+	fileWriter, err := filewriter.NewFileWriter(f.FileName, fileSize, f.MarkChunkAsDownloaded, downloadPath)
 	if err != nil {
 		return err
 	}
@@ -73,7 +93,7 @@ func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fil
 		})
 	}
 
-	f.Nodes = structures.NewSynchronizedMap[*net.UDPAddr, *NodeInfo]()
+	f.Nodes = structures.NewSynchronizedMap[string, *NodeInfo]()
 
 	return nil
 }
@@ -84,19 +104,22 @@ func (f *ForDownloadFile) IsFileDownloaded() bool {
 
 func (f *ForDownloadFile) AddNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
 	nodeInfo := NodeInfo{
-		Chunks: structures.NewSynchronizedMap[uint16, time.Time](),
+		Address: nodeAddr.String(),
+		Chunks:  structures.NewSynchronizedMap[uint16, *RequestInfo](),
 	}
 
 	decoded := protocol.DecodeBitField(bitfield)
-	for _, chunkIndex := range decoded {
-		nodeInfo.Chunks.Put(chunkIndex, time.Time{})
+	for index, hasChunk := range decoded {
+		if hasChunk {
+			nodeInfo.Chunks.Put(uint16(index), &RequestInfo{TimeLastRequested: time.Time{}})
+		}
 	}
 
-	f.Nodes.Put(nodeAddr, &nodeInfo)
+	f.Nodes.Put(nodeAddr.String(), &nodeInfo)
 }
 
 func (f *ForDownloadFile) MarkChunkAsRequested(chunkIndex uint16, nodeInfo *NodeInfo) {
-	nodeInfo.Chunks.Put(chunkIndex, time.Now())
+	nodeInfo.Chunks.Put(chunkIndex, &RequestInfo{TimeLastRequested: time.Now()})
 }
 
 func (f *ForDownloadFile) MarkChunkAsDownloaded(chunkIndex uint16) {
@@ -115,6 +138,14 @@ func (f *ForDownloadFile) GetChunkHash(chunkIndex uint16) [20]byte {
 	return chunk.Hash
 }
 
+func (f *ForDownloadFile) GetDownloadedChunks() []uint {
+	downloadedChunks := f.Chunks.IndexesWhere(func(chunk ChunkInfo) bool {
+		return chunk.Downloaded
+	})
+
+	return downloadedChunks
+}
+
 func (f *ForDownloadFile) GetMissingChunks() []uint {
 	missingChunks := f.Chunks.IndexesWhere(func(chunk ChunkInfo) bool {
 		return !chunk.Downloaded
@@ -123,18 +154,36 @@ func (f *ForDownloadFile) GetMissingChunks() []uint {
 	return missingChunks
 }
 
+func (f *ForDownloadFile) GetNumberOfNodesWhichHaveChunk(chunkIndex uint16) uint {
+	var numberOfNodes uint = 0
+	f.Nodes.ForEach(func(nodeAddrString string, nodeInfo *NodeInfo) {
+		_, ok := nodeInfo.Chunks.Get(chunkIndex)
+		if ok {
+			numberOfNodes++
+		}
+	})
+
+	return numberOfNodes
+}
+
 func (f *ForDownloadFile) LengthOfMissingChunks() int {
 	return len(f.GetMissingChunks())
 }
 
 func (n *NodeInfo) ShouldRequestChunk(chunkIndex uint16) bool {
-	chunk, ok := n.Chunks.Get(chunkIndex)
+	chunk, ok := n.GetLastTimeChunkWasRequested(chunkIndex)
 	if !ok {
 		return false
 	}
 
-	// Chunk was not requested yet or it was requested more than 3 seconds ago
+	// Chunk was not requested yet or it was requested more than the chunk timeout ago
+	// The expected time could be improved by calculating the average time between requests
 	return chunk == time.Time{} || time.Since(chunk) > ChunkTimeout
+}
+
+func (n *NodeInfo) GetLastTimeChunkWasRequested(chunkIndex uint16) (time.Time, bool) {
+	requestInfo, ok := n.Chunks.Get(chunkIndex)
+	return requestInfo.TimeLastRequested, ok
 }
 
 func (f *ForDownloadFile) WriteChunkToDisk(chunkIndex uint16, chunkContent []uint8) {

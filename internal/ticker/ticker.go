@@ -10,14 +10,16 @@ type Ticker interface {
 }
 
 type ticker struct {
-	toExecute   func()
-	quitChannel chan struct{}
+	toExecute    func()
+	tickInterval time.Duration
+	quitChannel  chan struct{}
 }
 
-func NewTicker(toExecute func()) Ticker {
+func NewTicker(tickInterval time.Duration, toExecute func()) Ticker {
 	return ticker{
-		toExecute:   toExecute,
-		quitChannel: make(chan struct{}),
+		toExecute:    toExecute,
+		tickInterval: tickInterval,
+		quitChannel:  make(chan struct{}),
 	}
 }
 
@@ -35,7 +37,7 @@ func (t ticker) start() {
 		select {
 		case <-t.quitChannel:
 			return
-		case <-time.After(1 * time.Second):
+		case <-time.After(t.tickInterval):
 			t.toExecute()
 		}
 	}

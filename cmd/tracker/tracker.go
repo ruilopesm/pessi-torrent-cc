@@ -12,7 +12,7 @@ type Tracker struct {
 	listener net.Listener
 
 	files structures.SynchronizedMap[string, *TrackedFile]
-	nodes structures.SynchronizedList[*NodeInfo]
+	nodes structures.SynchronizedMap[string, *NodeInfo]
 
 	quitChannel chan struct{}
 }
@@ -21,7 +21,7 @@ func NewTracker(port uint16) Tracker {
 	return Tracker{
 		tcpPort: port,
 		files:   structures.NewSynchronizedMap[string, *TrackedFile](),
-		nodes:   structures.NewSynchronizedList[*NodeInfo](),
+		nodes:   structures.NewSynchronizedMap[string, *NodeInfo](),
 
 		quitChannel: make(chan struct{}),
 	}

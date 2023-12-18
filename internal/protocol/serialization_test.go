@@ -75,15 +75,15 @@ func TestSerialize(t *testing.T) {
 	testSerializeStruct(&initPacket, &deserializeInit, t)
 	checkEquals(initPacket, deserializeInit, t)
 
-	// create dummy PublishChunkPacket
-	publishChunkPacket := NewPublishChunkPacket([20]byte{1, 2, 3, 4, 5}, []uint16{1, 2, 3, 4, 5})
+	// create dummy UpdateChunksPacket
+	publishChunkPacket := NewUpdateChunksPacket("test.txt", EncodeBitField([]bool{true, true, true, true, true}))
 
-	var deserializePublishChunk PublishChunkPacket
+	var deserializePublishChunk UpdateChunksPacket
 	testSerializeStruct(&publishChunkPacket, &deserializePublishChunk, t)
 	checkEquals(publishChunkPacket, deserializePublishChunk, t)
 
 	// create dummy AnswerNodesPacket
-	answerNodesPacket := NewAnswerNodesPacket("filename.txt", 5, [20]byte{1, 2, 3, 4, 5}, [][20]byte{{6, 7, 8}, {9, 10, 11}}, []string{"portatil1.local"}, []uint16{1, 2, 3, 4, 5}, [][]uint16{{1, 2, 3, 4, 5}})
+	answerNodesPacket := NewAnswerFileWithNodesPacket("filename.txt", 5, [20]byte{1, 2, 3, 4, 5}, [][20]byte{{6, 7, 8}, {9, 10, 11}}, []string{"portatil1.local"}, []uint16{1, 2, 3, 4, 5}, []Bitfield{EncodeBitField([]bool{true, true, true, true, true})})
 
 	var deserializeAnswerNodes AnswerNodesPacket
 	testSerializeStruct(&answerNodesPacket, &deserializeAnswerNodes, t)

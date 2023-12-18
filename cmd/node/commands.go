@@ -136,6 +136,8 @@ func (n *Node) status(_ []string) error {
 		})
 	}
 
+	logger.Info("Download path: %s", n.downloadPath)
+
 	return nil
 }
 
@@ -145,6 +147,39 @@ func (n *Node) removeFile(args []string) error {
 
 	packet := protocol.NewRemoveFilePacket(filename)
 	n.conn.EnqueuePacket(&packet)
+
+	return nil
+}
+
+// path <path>
+func (n *Node) setDownloadPath(args []string) error {
+	path := args[0]
+
+	_, err := os.Stat(path)
+	if err != nil {
+		logger.Info("Path %s does not exist", path)
+		return err
+	}
+
+	// verify if path has a trailing slash
+	if path[len(path)-1] != '/' {
+		path += "/"
+	}
+
+	n.downloadPath = path
+
+	return nil
+}
+
+// statistics
+func (n *Node) statistics(_ []string) error {
+	statistics := n.nodeStatistics
+	logger.Info("Total uploaded: %d bytes", statistics.TotalUploaded)
+	logger.Info("Total downloaded: %d bytes", statistics.TotalDownloaded)
+
+	for addr := range statistics.nodeMap {
+		logger.Info("Average download speed from %s: %.2f bytes/s", addr, statistics.getAverageDownloadSpeed(addr))
+	}
 
 	return nil
 }

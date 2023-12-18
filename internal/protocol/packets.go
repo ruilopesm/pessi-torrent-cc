@@ -42,26 +42,21 @@ func (pf *PublishFilePacket) GetPacketType() uint8 {
 	return PublishFileType
 }
 
-// PublishChunkPacket is sent by the node to the tracker when it wants to update the tracker about the chunks it has from a file
-type PublishChunkPacket struct {
-	FileHash     [20]byte
-	BitfieldSize uint16
-	Bitfield     []uint8
+// UpdateChunksPacket is sent by the node to the tracker when it wants to update the tracker about the chunks it has from a file
+type UpdateChunksPacket struct {
+	FileName string
+	Bitfield Bitfield
 }
 
-func NewPublishChunkPacket(fileHash [20]byte, bitfield []uint16) PublishChunkPacket {
-	binaryBitfield := EncodeBitField(bitfield)
-	bitfieldSize := len(binaryBitfield)
-
-	return PublishChunkPacket{
-		FileHash:     fileHash,
-		BitfieldSize: uint16(bitfieldSize),
-		Bitfield:     binaryBitfield,
+func NewUpdateChunksPacket(fileName string, bitfield Bitfield) UpdateChunksPacket {
+	return UpdateChunksPacket{
+		FileName: fileName,
+		Bitfield: bitfield,
 	}
 }
 
-func (pc *PublishChunkPacket) GetPacketType() uint8 {
-	return PublishChunkType
+func (pc *UpdateChunksPacket) GetPacketType() uint8 {
+	return UpdateChunksType
 }
 
 // RequestFilePacket is sent by the node to the tracker when it wants to download a file to get information about the file
@@ -77,6 +72,20 @@ func NewRequestFilePacket(fileName string) RequestFilePacket {
 
 func (rf *RequestFilePacket) GetPacketType() uint8 {
 	return RequestFileType
+}
+
+type UpdateFilePacket struct {
+	FileName string
+}
+
+func NewUpdateFilePacket(fileName string) UpdateFilePacket {
+	return UpdateFilePacket{
+		FileName: fileName,
+	}
+}
+
+func (uf *UpdateFilePacket) GetPacketType() uint8 {
+	return UpdateFileType
 }
 
 // TRACKER -> NODE
@@ -136,8 +145,8 @@ func (nf *NotFoundPacket) GetPacketType() uint8 {
 	return NotFoundType
 }
 
-// AnswerNodesPacket is sent by the tracker to the node when it wants to download a file to give information about the file
-type AnswerNodesPacket struct {
+// AnswerFileWithNodesPacket is sent by the tracker to the node when it wants to download a file to give information about the file
+type AnswerFileWithNodesPacket struct {
 	FileName    string
 	FileSize    uint64
 	FileHash    [20]byte
@@ -151,8 +160,8 @@ type NodeFileInfo struct {
 	Bitfield []uint8
 }
 
-func NewAnswerNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte, names []string, ports []uint16, bitfields [][]uint16) AnswerNodesPacket {
-	an := AnswerNodesPacket{
+func NewAnswerFileWithNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte, names []string, ports []uint16, bitfields []Bitfield) AnswerFileWithNodesPacket {
+	an := AnswerFileWithNodesPacket{
 		FileName:    fileName,
 		FileSize:    fileSize,
 		FileHash:    fileHash,
@@ -160,7 +169,35 @@ func NewAnswerNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, c
 	}
 
 	for i := 0; i < len(bitfields); i++ {
-		bitfield := EncodeBitField(bitfields[i])
+		bitfield := bitfields[i]
+
+		node := NodeFileInfo{
+			Name:     names[i],
+			Port:     ports[i],
+			Bitfield: bitfield,
+		}
+		an.Nodes = append(an.Nodes, node)
+	}
+
+	return an
+}
+
+func (an *AnswerFileWithNodesPacket) GetPacketType() uint8 {
+	return AnswerFileWithNodesType
+}
+
+type AnswerNodesPacket struct {
+	FileName string
+	Nodes    []NodeFileInfo
+}
+
+func NewAnswerNodesPacket(fileName string, names []string, ports []uint16, bitfields []Bitfield) AnswerNodesPacket {
+	an := AnswerNodesPacket{
+		FileName: fileName,
+	}
+
+	for i := 0; i < len(bitfields); i++ {
+		bitfield := bitfields[i]
 
 		node := NodeFileInfo{
 			Name:     names[i],
