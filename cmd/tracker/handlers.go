@@ -65,20 +65,20 @@ func (t *Tracker) handleRequestFilePacket(packet *protocol.RequestFilePacket, co
 	logger.Info("Request file packet received from %s", conn.RemoteAddr())
 
 	if file, ok := t.files.Get(packet.FileName); ok {
-		var ipAddrs []string
+		var names []string
 		var ports []uint16
 		var bitfields []protocol.Bitfield
 
 		t.nodes.ForEach(func(_ string, node *NodeInfo) {
 			if bitfield, exists := node.files.Get(packet.FileName); exists {
-				ipAddrs = append(ipAddrs, node.name)
+				names = append(names, node.name)
 				ports = append(ports, node.udpPort)
 				bitfields = append(bitfields, bitfield)
 			}
 		})
 
 		// Send file name, hash and chunks hashes
-		anPacket := protocol.NewAnswerFileWithNodesPacket(file.FileName, file.FileSize, file.FileHash, file.ChunkHashes, ipAddrs, ports, bitfields)
+		anPacket := protocol.NewAnswerFileWithNodesPacket(file.FileName, file.FileSize, file.FileHash, file.ChunkHashes, names, ports, bitfields)
 		conn.EnqueuePacket(&anPacket)
 	} else {
 		logger.Info("File %s requested from %s does not exist", packet.FileName, conn.RemoteAddr())

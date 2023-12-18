@@ -59,7 +59,7 @@ func (n *Node) handleAnswerFileWithNodesPacket(packet *protocol.AnswerFileWithNo
 	forDownloadFile.UpdatedByTracker = true
 
 	for _, node := range packet.Nodes {
-		ipAddrStr, _ := n.dns.ResolveDomain(node.Name)
+		ipAddrStr, _ := n.dns.ResolveIP(node.Name)
 		ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
 
 		if err != nil {
@@ -93,7 +93,7 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 	logger.Info("Updating nodes who have chunks for file %s", packet.FileName)
 
 	for _, node := range packet.Nodes {
-		ipAddrStr, _ := n.dns.ResolveDomain(node.Name)
+		ipAddrStr, _ := n.dns.ResolveIP(node.Name)
 		ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
 
 		if err != nil {
