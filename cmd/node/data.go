@@ -43,6 +43,8 @@ type ForDownloadFile struct {
 	NumberOfChunks uint16
 	Chunks         structures.SynchronizedList[ChunkInfo]
 
+	PendingChunks structures.SynchronizedMap[uint16, time.Time] // Chunk index -> Last time chunk was requested
+
 	Nodes structures.SynchronizedMap[string, *NodeInfo]
 }
 
@@ -94,6 +96,7 @@ func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fil
 	}
 
 	f.Nodes = structures.NewSynchronizedMap[string, *NodeInfo]()
+	f.PendingChunks = structures.NewSynchronizedMap[uint16, time.Time]()
 
 	return nil
 }

@@ -196,20 +196,23 @@ func (n *Node) tick() {
 				chunk := missingChunks[0]
 				missingChunks = missingChunks[1:] // Pop first element
 
-				requestInfo, ok := nodeInfo.Chunks.Get(uint16(chunk))
+				requestInfo, _ := nodeInfo.Chunks.Get(uint16(chunk))
 
-				if time.Now().Sub(requestInfo.TimeLastRequested) >= ChunkRequestTimeoutDuration || !ok {
-					requestInfo.NumberOfTries++
-					if requestInfo.NumberOfTries >= MaxTriesPerChunk {
-						logger.Warn("Node %s is not responding.", nodeInfo.Address)
-						nodeInfo.Timeouts++
-						if nodeInfo.Timeouts >= MaxNodeTimeouts {
-							logger.Warn("Node %s has timed out 3 times. Removing it from file %s", nodeInfo.Address, file.FileName)
-							file.Nodes.Delete(nodeInfo.Address)
-						}
-					} else {
-						chunksToRequest[nodeInfo] = append(chunksToRequest[nodeInfo], uint16(chunk)) // Queue chunk
+				lastRequested, ok := file.PendingChunks.Get(uint16(chunk)) // Check if chunk has already been requested
+				if ok && time.Now().Sub(lastRequested) < ChunkRequestTimeoutDuration {
+					continue
+				}
+
+				requestInfo.NumberOfTries++
+				if requestInfo.NumberOfTries >= MaxTriesPerChunk {
+					logger.Warn("Node %s is not responding.", nodeInfo.Address)
+					nodeInfo.Timeouts++
+					if nodeInfo.Timeouts >= MaxNodeTimeouts {
+						logger.Warn("Node %s has timed out 3 times. Removing it from file %s", nodeInfo.Address, file.FileName)
+						file.Nodes.Delete(nodeInfo.Address)
 					}
+				} else {
+					chunksToRequest[nodeInfo] = append(chunksToRequest[nodeInfo], uint16(chunk)) // Queue chunk
 				}
 			}
 		}
