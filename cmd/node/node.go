@@ -108,7 +108,7 @@ func (n *Node) startCLI() {
 
 	c := cli.NewCLI(n.Stop, console)
 	c.AddCommand("connect", "<tracker address>", "Connect to the tracker", 1, n.connect)
-	c.AddCommand("publish", "<file name>", "", 1, n.publish)
+	c.AddCommand("publish", "<file name | directory>", "", 1, n.publish)
 	c.AddCommand("request", "<file name>", "", 1, n.requestFile)
 	c.AddCommand("status", "", "Show the status of the node", 0, n.status)
 	c.AddCommand("statistics", "", "Show the statistics of the node", 0, n.statistics)
