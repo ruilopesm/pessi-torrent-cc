@@ -68,8 +68,6 @@ func NewForDownloadFile(fileName string) *ForDownloadFile {
 }
 
 func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fileSize uint64, numberOfChunks uint16) error {
-	f.UpdatedByTracker = true
-
 	f.FileHash = fileHash
 	f.FileSize = fileSize
 	fileWriter, err := filewriter.NewFileWriter(f.FileName, fileSize, f.MarkChunkAsDownloaded)

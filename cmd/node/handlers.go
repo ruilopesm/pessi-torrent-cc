@@ -53,6 +53,7 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 		logger.Error("Error setting data for file %s: %v", packet.FileName, err)
 		return
 	}
+	forDownloadFile.UpdatedByTracker = true
 
 	for _, node := range packet.Nodes {
 		udpAddr := net.UDPAddr{
