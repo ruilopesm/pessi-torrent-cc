@@ -48,7 +48,7 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 
 	logger.Info("Updating nodes who have chunks for file %s", packet.FileName)
 
-	err := forDownloadFile.SetData(packet.FileHash, packet.ChunkHashes, packet.FileSize, uint16(len(packet.ChunkHashes)))
+	err := forDownloadFile.SetData(packet.FileHash, packet.ChunkHashes, packet.FileSize, uint16(len(packet.ChunkHashes)), n.downloadPath)
 	if err != nil {
 		logger.Error("Error setting data for file %s: %v", packet.FileName, err)
 		return
@@ -185,3 +185,74 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 		n.nodeStatistics.addUploadedBytes(chunkSize)
 	}
 }
+// func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, addr *net.UDPAddr) {
+// 	logger.Info("Request chunks packet received from %s", addr)
+
+// 	// Get file from published files
+// 	publishedFile, ok := n.published.Get(packet.FileName)
+// 	if !ok {
+// 		logger.Warn("File %s not found in published files", packet.FileName)
+
+//     // downloadFile, ok := n.forDownload.Get(packet.FileName)
+//     // fileWriter := downloadFile.FileWriter
+//     // TODO: arranjar forma de ecnontrar o ficheiro
+//     // if !ok {
+//     //   logger.Warn("File %s not found in forDownload files", packet.FileName)
+//     //   return
+//     // }
+//     // 
+//     // n.sendFileChunks(downloadFile, packet, addr)
+//     return
+// 	}
+
+//   n.sendFileChunks(publishedFile, packet, addr)
+// }
+
+// func (n *Node) sendFileChunks(publishedFile *File, packet *protocol.RequestChunksPacket, addr *net.UDPAddr) {
+// 	// Open file by the given path
+// 	file, err := os.Open(publishedFile.Path)
+// 	if err != nil {
+// 		logger.Warn("Error opening file: %v", err)
+// 		return
+// 	}
+
+// 	stats, _ := file.Stat()
+// 	chunkSize := utils.ChunkSize(uint64(stats.Size()))
+
+// 	// Send requested chunks
+// 	for _, chunk := range packet.Chunks {
+// 		logger.Info("Sending chunk %d of file %s to %s", chunk, packet.FileName, addr)
+
+// 		// Seek to the beginning of the chunk
+// 		_, err = file.Seek(int64(uint64(chunk)*chunkSize), 0)
+// 		if err != nil {
+// 			logger.Warn("Error seeking file: %v", err)
+// 			return
+// 		}
+
+// 		// Read chunk bytes
+// 		chunkContent := make([]byte, chunkSize)
+// 		read, err := file.Read(chunkContent)
+// 		if err != nil && !errors.Is(err, io.EOF) {
+// 			logger.Warn("Error reading file: %v", err)
+// 			return
+// 		}
+
+// 		// Send chunk bytes
+// 		packet := protocol.NewChunkPacket(packet.FileName, chunk, chunkContent[:read])
+// 		n.srv.SendPacket(&packet, addr)
+// 		n.nodeStatistics.addUploadedBytes(chunkSize)
+// 	}
+// }
+
+// func (n *Node) sendUncompleteFile(downloadFile *ForDownloadFile, packet *protocol.RequestChunksPacket, addr *net.UDPAddr) {
+//   for _, chunk := range packet.Chunks {
+// 		logger.Info("Sending chunk %d of file %s to %s", chunk, packet.FileName, addr)
+//     chunkContent := downloadFile.GetChunkHash(chunk)
+//     packet := protocol.NewChunkPacket(packet.FileName, chunk, chunkContent[:])
+//     chunkSize := uint64(len(chunkContent))
+
+//     n.srv.SendPacket(&packet, addr)
+// 		n.nodeStatistics.addUploadedBytes(chunkSize)
+//   }
+// }

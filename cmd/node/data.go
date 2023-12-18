@@ -26,6 +26,7 @@ func NewFile(fileName string, path string) File {
 
 type ForDownloadFile struct {
 	FileName   string
+  FilePath   string
 	FileHash   [20]byte
 	FileSize   uint64
 	FileWriter *filewriter.FileWriter
@@ -64,10 +65,10 @@ func NewForDownloadFile(fileName string) *ForDownloadFile {
 	}
 }
 
-func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fileSize uint64, numberOfChunks uint16) error {
+func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fileSize uint64, numberOfChunks uint16, path string) error {
 	f.FileHash = fileHash
 	f.FileSize = fileSize
-	fileWriter, err := filewriter.NewFileWriter(f.FileName, fileSize, f.MarkChunkAsDownloaded)
+	fileWriter, err := filewriter.NewFileWriter(f.FileName, fileSize, f.MarkChunkAsDownloaded, path)
 	if err != nil {
 		return err
 	}
@@ -127,6 +128,14 @@ func (f *ForDownloadFile) ChunkAlreadyDownloaded(chunkIndex uint16) bool {
 func (f *ForDownloadFile) GetChunkHash(chunkIndex uint16) [20]byte {
 	chunk, _ := f.Chunks.Get(uint(chunkIndex))
 	return chunk.Hash
+}
+
+func (f *ForDownloadFile) GetDownloadedChunks() []uint {
+	downloadedChunks := f.Chunks.IndexesWhere(func(chunk ChunkInfo) bool {
+		return chunk.Downloaded
+	})
+
+	return downloadedChunks
 }
 
 func (f *ForDownloadFile) GetMissingChunks() []uint {

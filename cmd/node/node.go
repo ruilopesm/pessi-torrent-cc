@@ -34,6 +34,7 @@ type Node struct {
 	pending        structures.SynchronizedMap[string, *File]
 	forDownload    structures.SynchronizedMap[string, *ForDownloadFile]
 	downloadedFile structures.SynchronizedMap[string, *File]
+  downloadPath   string
 
 	nodeStatistics *NodeStatistics
 
@@ -48,6 +49,7 @@ func NewNode(trackerAddr string, udpPort uint16) Node {
 		pending:     structures.NewSynchronizedMap[string, *File](),
 		published:   structures.NewSynchronizedMap[string, *File](),
 		forDownload: structures.NewSynchronizedMap[string, *ForDownloadFile](),
+    downloadPath: "./downloads",
 
 		nodeStatistics: NewNodeStatistics(),
 
@@ -112,6 +114,7 @@ func (n *Node) startCLI() {
 	c.AddCommand("request", "<file name>", "", 1, n.requestFile)
 	c.AddCommand("status", "", "Show the status of the node", 0, n.status)
 	c.AddCommand("statistics", "", "Show the statistics of the node", 0, n.statistics)
+	c.AddCommand("path", "<download folder path>", "Set download path", 1, n.setDownloadPath)
 	c.AddCommand("remove", "<file name>", "", 1, n.removeFile)
 	c.Start()
 }

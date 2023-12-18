@@ -8,7 +8,6 @@ import (
 )
 
 const (
-	DownloadsFolder = "downloads"
 	Permissions     = 0666
 	Flags           = os.O_WRONLY | os.O_CREATE
 
@@ -30,8 +29,8 @@ type Chunk struct {
 	data  []uint8
 }
 
-func NewFileWriter(fileName string, fileSize uint64, onWrite func(index uint16)) (*FileWriter, error) {
-	path := DownloadsFolder + "/" + fileName
+func NewFileWriter(fileName string, fileSize uint64, onWrite func(index uint16), downloadsFolder string) (*FileWriter, error) {
+	path := downloadsFolder + "/" + fileName
 
 	// Create sparse file
 	file, err := os.OpenFile(path, Flags, Permissions)

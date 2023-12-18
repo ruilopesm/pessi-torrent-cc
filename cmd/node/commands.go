@@ -135,6 +135,8 @@ func (n *Node) status(_ []string) error {
 		})
 	}
 
+  logger.Info("Download path: %s", n.downloadPath)
+
 	return nil
 }
 
@@ -146,6 +148,22 @@ func (n *Node) removeFile(args []string) error {
 	n.conn.EnqueuePacket(&packet)
 
 	return nil
+}
+
+
+// path <path>
+func (n *Node) setDownloadPath(args []string) error {
+  path := args[0]
+
+  _, err := os.Stat(path)
+  if err != nil {
+    logger.Info("Path %s does not exist", path)
+    return err
+  }
+
+  n.downloadPath = path
+
+  return nil
 }
 
 // statistics
