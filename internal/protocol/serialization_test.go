@@ -83,7 +83,7 @@ func TestSerialize(t *testing.T) {
 	checkEquals(publishChunkPacket, deserializePublishChunk, t)
 
 	// create dummy AnswerNodesPacket
-	answerNodesPacket := NewAnswerNodesPacket("filename.txt", 5, [20]byte{1, 2, 3, 4, 5}, [][20]byte{{6, 7, 8}, {9, 10, 11}}, [][4]byte{{1, 2, 3, 4}}, []uint16{1, 2, 3, 4, 5}, []Bitfield{EncodeBitField([]bool{true, true, true, true, true})})
+	answerNodesPacket := NewAnswerFileWithNodesPacket("filename.txt", 5, [20]byte{1, 2, 3, 4, 5}, [][20]byte{{6, 7, 8}, {9, 10, 11}}, [][4]byte{{1, 2, 3, 4}}, []uint16{1, 2, 3, 4, 5}, []Bitfield{EncodeBitField([]bool{true, true, true, true, true})})
 
 	var deserializeAnswerNodes AnswerNodesPacket
 	testSerializeStruct(&answerNodesPacket, &deserializeAnswerNodes, t)

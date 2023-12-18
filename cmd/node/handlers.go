@@ -14,6 +14,8 @@ import (
 
 func (n *Node) HandlePackets(packet protocol.Packet, conn *transport.TCPConnection) {
 	switch packet := packet.(type) {
+	case *protocol.AnswerFileWithNodesPacket:
+		n.handleAnswerFileWithNodesPacket(packet, conn)
 	case *protocol.AnswerNodesPacket:
 		n.handleAnswerNodesPacket(packet, conn)
 	case *protocol.FileSuccessPacket:
@@ -38,8 +40,8 @@ func (n *Node) HandleUDPPackets(packet protocol.Packet, addr *net.UDPAddr) {
 	}
 }
 
-// Handler for when a node requests, to the tracker, the list of nodes who have a specific file
-func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn *transport.TCPConnection) {
+// Handler for when a node requests, to the tracker, a file
+func (n *Node) handleAnswerFileWithNodesPacket(packet *protocol.AnswerFileWithNodesPacket, conn *transport.TCPConnection) {
 	// Update file in forDownload data structure
 	forDownloadFile, ok := n.forDownload.Get(packet.FileName)
 	if !ok {
@@ -54,6 +56,32 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 		return
 	}
 	forDownloadFile.UpdatedByTracker = true
+
+	for _, node := range packet.Nodes {
+		udpAddr := net.UDPAddr{
+			IP:   node.IPAddr[:],
+			Port: int(node.Port),
+		}
+
+		ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
+
+		if n.udpPort != node.Port || ipAddr != node.IPAddr { // Do not add itself to the list of nodes
+			forDownloadFile.AddNode(&udpAddr, node.Bitfield)
+		}
+	}
+
+	logger.Info("File %s information internally updated. Run 'status' in order to check for downloading files", packet.FileName)
+}
+
+// Handler for when a node request, to the tracker, updated information about nodes who have a file
+func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn *transport.TCPConnection) {
+	// Update file in forDownload data structure
+	forDownloadFile, ok := n.forDownload.Get(packet.FileName)
+	if !ok {
+		return // File was removed from forDownload files
+	}
+
+	logger.Info("Updating nodes who have chunks for file %s", packet.FileName)
 
 	for _, node := range packet.Nodes {
 		udpAddr := net.UDPAddr{
