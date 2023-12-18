@@ -25,7 +25,11 @@ func NewFile(fileName string, path string) File {
 }
 
 type ForDownloadFile struct {
-	UpdatedByTracker bool // Whether the tracker has already sent the file info or not
+	// Whether the tracker has already sent the file info or not
+	UpdatedByTracker bool
+
+	// Timestamp of when the download started
+	DownloadStarted time.Time
 
 	FileName   string
 	FileHash   [20]byte

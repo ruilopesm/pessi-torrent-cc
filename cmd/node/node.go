@@ -155,7 +155,8 @@ func (n *Node) tick() {
 		}
 
 		if file.IsFileDownloaded() {
-			logger.Info("File %s was successfully downloaded", fileName)
+			timeToDownload := time.Since(file.DownloadStarted)
+			logger.Info("File %s was successfully downloaded in %s", fileName, timeToDownload.String())
 			file.FileWriter.Stop()
 			delete(n.forDownload.M, fileName)
 			continue
@@ -215,7 +216,6 @@ func (n *Node) RequestChunks(chunkIndexes []uint16, nodeAddr *net.UDPAddr, file 
 		return
 	}
 
-	logger.Info("Requesting %d chunks to %s", len(chunkIndexes), nodeAddr)
 	packet := protocol.NewRequestChunksPacket(file.FileName, chunkIndexes)
 	n.srv.EnqueueRequest(&packet, nodeAddr)
 

@@ -55,6 +55,7 @@ func (n *Node) handleAnswerFileWithNodesPacket(packet *protocol.AnswerFileWithNo
 		logger.Error("Error setting data for file %s: %v", packet.FileName, err)
 		return
 	}
+	forDownloadFile.DownloadStarted = time.Now()
 	forDownloadFile.UpdatedByTracker = true
 
 	for _, node := range packet.Nodes {
