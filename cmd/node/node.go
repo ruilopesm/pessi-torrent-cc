@@ -15,10 +15,11 @@ import (
 
 const (
 	UpdateServerChunksInterval  = 5 * time.Second
-	MaxChunkPerRequest          = 100
+	MaxChunksPerRequest         = 100
 	ChunkRequestTimeoutDuration = 500 * time.Millisecond
 	MaxTriesPerChunk            = 3
 	MaxNodeTimeouts             = 3
+	TickInterval                = 100 * time.Millisecond
 )
 
 type Node struct {
@@ -46,10 +47,11 @@ func NewNode(trackerAddr string, udpPort uint16) Node {
 		trackerAddr: trackerAddr,
 		udpPort:     udpPort,
 
-		pending:      structures.NewSynchronizedMap[string, *File](),
-		published:    structures.NewSynchronizedMap[string, *File](),
-		forDownload:  structures.NewSynchronizedMap[string, *ForDownloadFile](),
-		downloadPath: "./downloads",
+		pending:        structures.NewSynchronizedMap[string, *File](),
+		published:      structures.NewSynchronizedMap[string, *File](),
+		forDownload:    structures.NewSynchronizedMap[string, *ForDownloadFile](),
+    downloadedFile: structures.NewSynchronizedMap[string, *File](),
+		downloadPath:   "./downloads",
 
 		nodeStatistics: NewNodeStatistics(),
 
@@ -110,7 +112,7 @@ func (n *Node) startCLI() {
 
 	c := cli.NewCLI(n.Stop, console)
 	c.AddCommand("connect", "<tracker address>", "Connect to the tracker", 1, n.connect)
-	c.AddCommand("publish", "<file name>", "", 1, n.publish)
+	c.AddCommand("publish", "<file name | directory>", "", 1, n.publish)
 	c.AddCommand("request", "<file name>", "", 1, n.requestFile)
 	c.AddCommand("status", "", "Show the status of the node", 0, n.status)
 	c.AddCommand("statistics", "", "Show the statistics of the node", 0, n.statistics)
@@ -120,7 +122,7 @@ func (n *Node) startCLI() {
 }
 
 func (n *Node) startTicker() {
-	tck := ticker.NewTicker(n.tick)
+	tck := ticker.NewTicker(TickInterval, n.tick)
 	tck.Start()
 	n.tck = tck
 }
@@ -137,28 +139,33 @@ func (n *Node) updateServerChunks(file *ForDownloadFile) {
 	n.conn.EnqueuePacket(&packet)
 }
 
-func (n *Node) SendRequestUpdateFile(fileName string) {
-	packet := protocol.NewRequestFilePacket(fileName)
-	n.conn.EnqueuePacket(&packet)
-}
-
 func (n *Node) tick() {
 	n.forDownload.Lock()
 	defer n.forDownload.Unlock()
 
 	for fileName, file := range n.forDownload.M {
+		if !file.UpdatedByTracker {
+			continue
+		}
+
 		if time.Now().Sub(file.LastServerChunksUpdate) > UpdateServerChunksInterval || file.IsFileDownloaded() {
 			file.LastServerChunksUpdate = time.Now()
 			n.updateServerChunks(file)
 			logger.Info("Sent update chunks packet to tracker for file %s", fileName)
 
 			// Also request to update our nodes info about the file
-			n.SendRequestUpdateFile(fileName)
+			packet := protocol.NewUpdateFilePacket(fileName)
+			n.conn.EnqueuePacket(&packet)
 		}
 
 		if file.IsFileDownloaded() {
-			logger.Info("File %s was successfully downloaded", fileName)
+			timeToDownload := time.Since(file.DownloadStarted)
+			logger.Info("File %s was successfully downloaded in %s", fileName, timeToDownload.String())
 			file.FileWriter.Stop()
+
+      file := NewFile(file.FileName, file.FilePath)
+      n.downloadedFile.Put(file.FileName, &file)
+
 			delete(n.forDownload.M, fileName)
 			continue
 		}
@@ -183,7 +190,7 @@ func (n *Node) tick() {
 		for _, nodeInfo := range nodes {
 			chunksToRequest[nodeInfo] = make([]uint16, 0)
 
-			for len(missingChunks) > 0 && len(chunksToRequest[nodeInfo]) < MaxChunkPerRequest {
+			for len(missingChunks) > 0 && len(chunksToRequest[nodeInfo]) < MaxChunksPerRequest {
 				chunk := missingChunks[0]
 				missingChunks = missingChunks[1:] // Pop first element
 
@@ -217,7 +224,6 @@ func (n *Node) RequestChunks(chunkIndexes []uint16, nodeAddr *net.UDPAddr, file 
 		return
 	}
 
-	logger.Info("Requesting %d chunks to %s", len(chunkIndexes), nodeAddr)
 	packet := protocol.NewRequestChunksPacket(file.FileName, chunkIndexes)
 	n.srv.EnqueueRequest(&packet, nodeAddr)
 

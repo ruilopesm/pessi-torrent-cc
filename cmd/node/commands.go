@@ -23,7 +23,8 @@ func (n *Node) connect(args []string) error {
 func (n *Node) requestFile(args []string) error {
 	filename := args[0]
 
-	n.SendRequestUpdateFile(filename)
+	packet := protocol.NewRequestFilePacket(filename)
+	n.conn.EnqueuePacket(&packet)
 
 	// Data of the file will be updated later, when the tracker responds back
 	n.forDownload.Put(filename, NewForDownloadFile(filename))

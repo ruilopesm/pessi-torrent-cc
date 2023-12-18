@@ -72,6 +72,20 @@ func (rf *RequestFilePacket) GetPacketType() uint8 {
 	return RequestFileType
 }
 
+type UpdateFilePacket struct {
+	FileName string
+}
+
+func NewUpdateFilePacket(fileName string) UpdateFilePacket {
+	return UpdateFilePacket{
+		FileName: fileName,
+	}
+}
+
+func (uf *UpdateFilePacket) GetPacketType() uint8 {
+	return UpdateFileType
+}
+
 // TRACKER -> NODE
 
 // FileSuccessPacket is sent by the tracker to the node when it
@@ -129,8 +143,8 @@ func (nf *NotFoundPacket) GetPacketType() uint8 {
 	return NotFoundType
 }
 
-// AnswerNodesPacket is sent by the tracker to the node when it wants to download a file to give information about the file
-type AnswerNodesPacket struct {
+// AnswerFileWithNodesPacket is sent by the tracker to the node when it wants to download a file to give information about the file
+type AnswerFileWithNodesPacket struct {
 	FileName    string
 	FileSize    uint64
 	FileHash    [20]byte
@@ -144,12 +158,40 @@ type NodeFileInfo struct {
 	Bitfield []uint8
 }
 
-func NewAnswerNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte, ipAddrs [][4]byte, ports []uint16, bitfields []Bitfield) AnswerNodesPacket {
-	an := AnswerNodesPacket{
+func NewAnswerFileWithNodesPacket(fileName string, fileSize uint64, fileHash [20]byte, chunkHashes [][20]byte, ipAddrs [][4]byte, ports []uint16, bitfields []Bitfield) AnswerFileWithNodesPacket {
+	an := AnswerFileWithNodesPacket{
 		FileName:    fileName,
 		FileSize:    fileSize,
 		FileHash:    fileHash,
 		ChunkHashes: chunkHashes,
+	}
+
+	for i := 0; i < len(bitfields); i++ {
+		bitfield := bitfields[i]
+
+		node := NodeFileInfo{
+			IPAddr:   ipAddrs[i],
+			Port:     ports[i],
+			Bitfield: bitfield,
+		}
+		an.Nodes = append(an.Nodes, node)
+	}
+
+	return an
+}
+
+func (an *AnswerFileWithNodesPacket) GetPacketType() uint8 {
+	return AnswerFileWithNodesType
+}
+
+type AnswerNodesPacket struct {
+	FileName string
+	Nodes    []NodeFileInfo
+}
+
+func NewAnswerNodesPacket(fileName string, ipAddrs [][4]byte, ports []uint16, bitfields []Bitfield) AnswerNodesPacket {
+	an := AnswerNodesPacket{
+		FileName: fileName,
 	}
 
 	for i := 0; i < len(bitfields); i++ {
