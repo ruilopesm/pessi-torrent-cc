@@ -40,14 +40,13 @@ func (n *Node) HandleUDPPackets(packet protocol.Packet, addr *net.UDPAddr) {
 
 // Handler for when a node requests, to the tracker, the list of nodes who have a specific file
 func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn *transport.TCPConnection) {
-	logger.Info("Answer nodes packet received from %s", conn.RemoteAddr())
-
 	// Update file in forDownload data structure
 	forDownloadFile, ok := n.forDownload.Get(packet.FileName)
 	if !ok {
-		logger.Warn("File %s not found in forDownload files", packet.FileName)
-		return
+		return // File was removed from forDownload files
 	}
+
+	logger.Info("Updating nodes who have chunks for file %s", packet.FileName)
 
 	err := forDownloadFile.SetData(packet.FileHash, packet.ChunkHashes, packet.FileSize, uint16(len(packet.ChunkHashes)))
 	if err != nil {
@@ -60,7 +59,12 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 			IP:   node.IPAddr[:],
 			Port: int(node.Port),
 		}
-		forDownloadFile.AddNode(&udpAddr, node.Bitfield)
+
+		ipAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
+
+		if n.udpPort != node.Port || ipAddr != node.IPAddr { // Do not add itself to the list of nodes
+			forDownloadFile.AddNode(&udpAddr, node.Bitfield)
+		}
 	}
 
 	logger.Info("File %s information internally updated. Run 'status' in order to check for downloading files", packet.FileName)
@@ -142,6 +146,7 @@ func (n *Node) handleRequestChunksPacket(packet *protocol.RequestChunksPacket, a
 	publishedFile, ok := n.published.Get(packet.FileName)
 	if !ok {
 		logger.Warn("File %s not found in published files", packet.FileName)
+		// TODO: Find file in downloaded files or being downloaded files
 		return
 	}
 

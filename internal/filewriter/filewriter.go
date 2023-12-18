@@ -57,49 +57,49 @@ func NewFileWriter(fileName string, fileSize uint64, onWrite func(index uint16))
 	}, nil
 }
 
-func (fw *FileWriter) EnqueueChunkToWrite(index uint16, data []uint8) {
-	fw.chunksQueue <- Chunk{index, data}
+func (fileWriter *FileWriter) EnqueueChunkToWrite(index uint16, data []uint8) {
+	fileWriter.chunksQueue <- Chunk{index, data}
 }
 
-func (fw *FileWriter) Start() {
+func (fileWriter *FileWriter) Start() {
 	for i := 0; i < WorkerPoolSize; i++ {
-		fw.workerWg.Add(1)
-		go fw.workerPool()
+		fileWriter.workerWg.Add(1)
+		go fileWriter.workerPool()
 	}
 
-	<-fw.stopChannel
-	fw.workerWg.Wait()
+	<-fileWriter.stopChannel
+	fileWriter.workerWg.Wait()
 }
 
-func (fw *FileWriter) workerPool() {
+func (fileWriter *FileWriter) workerPool() {
 	for {
-		chunk, ok := <-fw.chunksQueue
+		chunk, ok := <-fileWriter.chunksQueue
 		if !ok {
-			fw.workerWg.Done()
+			fileWriter.workerWg.Done()
 			return
 		}
 
-		fw.writeChunk(chunk)
+		fileWriter.writeChunk(chunk)
 	}
 }
 
-func (fw *FileWriter) writeChunk(chunk Chunk) {
-	_, err := fw.file.WriteAt(chunk.data, int64(chunk.index)*int64(fw.chunkSize))
+func (fileWriter *FileWriter) writeChunk(chunk Chunk) {
+	_, err := fileWriter.file.WriteAt(chunk.data, int64(chunk.index)*int64(fileWriter.chunkSize))
 	if err != nil {
 		logger.Error("Error writing chunk to file: %v", err)
 	}
 
 	//logger.Info("Chunk of index %d written to file %s", chunk.index, fw.fileName)
-	fw.onWrite(chunk.index)
+	fileWriter.onWrite(chunk.index)
 }
 
-func (fw *FileWriter) Stop() {
-	err := fw.file.Close()
+func (fileWriter *FileWriter) Stop() {
+	err := fileWriter.file.Close()
 	if err != nil {
 		logger.Error("Error closing file: %v", err)
 	}
 
-	fw.stopChannel <- struct{}{}
-	close(fw.chunksQueue)
-	close(fw.stopChannel)
+	fileWriter.stopChannel <- struct{}{}
+	close(fileWriter.chunksQueue)
+	close(fileWriter.stopChannel)
 }

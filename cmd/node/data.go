@@ -46,8 +46,10 @@ type ChunkInfo struct {
 }
 
 type NodeInfo struct {
+	Address string
 	// Chunk index -> Last time chunk was requested
-	Chunks structures.SynchronizedMap[uint16, RequestInfo]
+	Chunks   structures.SynchronizedMap[uint16, *RequestInfo]
+	Timeouts uint
 }
 
 type RequestInfo struct {
@@ -93,13 +95,14 @@ func (f *ForDownloadFile) IsFileDownloaded() bool {
 
 func (f *ForDownloadFile) AddNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
 	nodeInfo := NodeInfo{
-		Chunks: structures.NewSynchronizedMap[uint16, RequestInfo](),
+		Address: nodeAddr.String(),
+		Chunks:  structures.NewSynchronizedMap[uint16, *RequestInfo](),
 	}
 
 	decoded := protocol.DecodeBitField(bitfield)
 	for index, hasChunk := range decoded {
 		if hasChunk {
-			nodeInfo.Chunks.Put(uint16(index), RequestInfo{TimeLastRequested: time.Time{}})
+			nodeInfo.Chunks.Put(uint16(index), &RequestInfo{TimeLastRequested: time.Time{}})
 		}
 	}
 
@@ -107,7 +110,7 @@ func (f *ForDownloadFile) AddNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
 }
 
 func (f *ForDownloadFile) MarkChunkAsRequested(chunkIndex uint16, nodeInfo *NodeInfo) {
-	nodeInfo.Chunks.Put(chunkIndex, RequestInfo{TimeLastRequested: time.Now()})
+	nodeInfo.Chunks.Put(chunkIndex, &RequestInfo{TimeLastRequested: time.Now()})
 }
 
 func (f *ForDownloadFile) MarkChunkAsDownloaded(chunkIndex uint16) {

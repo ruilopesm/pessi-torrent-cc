@@ -14,7 +14,11 @@ import (
 )
 
 const (
-	UpdateServerChunksInterval = 5 * time.Second
+	UpdateServerChunksInterval  = 5 * time.Second
+	MaxChunkPerRequest          = 100
+	ChunkRequestTimeoutDuration = 500 * time.Millisecond
+	MaxTriesPerChunk            = 3
+	MaxNodeTimeouts             = 3
 )
 
 type Node struct {
@@ -26,9 +30,10 @@ type Node struct {
 	srv  transport.UDPServer
 	tck  ticker.Ticker
 
-	published   structures.SynchronizedMap[string, *File]
-	pending     structures.SynchronizedMap[string, *File]
-	forDownload structures.SynchronizedMap[string, *ForDownloadFile]
+	published      structures.SynchronizedMap[string, *File]
+	pending        structures.SynchronizedMap[string, *File]
+	forDownload    structures.SynchronizedMap[string, *ForDownloadFile]
+	downloadedFile structures.SynchronizedMap[string, *File]
 
 	nodeStatistics *NodeStatistics
 
@@ -165,27 +170,57 @@ func (n *Node) tick() {
 			return file.GetNumberOfNodesWhichHaveChunk(missingChunkI) < file.GetNumberOfNodesWhichHaveChunk(missingChunkJ)
 		})
 
-		file.Nodes.ForEach(func(nodeAddrString string, nodeInfo *NodeInfo) {
-			missingChunksPerNode := make([]uint16, 0)
-			for _, chunk := range missingChunks {
-				if nodeInfo.ShouldRequestChunk(uint16(chunk)) {
-					missingChunksPerNode = append(missingChunksPerNode, uint16(chunk))
-				}
-			}
-
-			nodeAddr, _ := net.ResolveUDPAddr("udp4", nodeAddrString)
-
-			if len(missingChunksPerNode) > 0 {
-				logger.Info("Requesting %d chunks to %s", len(missingChunksPerNode), nodeAddr)
-				packet := protocol.NewRequestChunksPacket(fileName, missingChunksPerNode)
-				n.srv.EnqueueRequest(&packet, nodeAddr)
-
-				// Mark chunks as requested
-				for _, chunkIndex := range missingChunksPerNode {
-					file.MarkChunkAsRequested(chunkIndex, nodeInfo)
-				}
-			}
+		nodes := file.Nodes.Values()
+		sort.Slice(nodes, func(i, j int) bool {
+			return n.nodeStatistics.getAverageDownloadSpeed(nodes[i].Address) < n.nodeStatistics.getAverageDownloadSpeed(nodes[j].Address)
 		})
+
+		chunksToRequest := make(map[*NodeInfo][]uint16)
+
+		for _, nodeInfo := range nodes {
+			chunksToRequest[nodeInfo] = make([]uint16, 0)
+
+			for len(missingChunks) > 0 && len(chunksToRequest[nodeInfo]) < MaxChunkPerRequest {
+				chunk := missingChunks[0]
+				missingChunks = missingChunks[1:] // Pop first element
+
+				requestInfo, ok := nodeInfo.Chunks.Get(uint16(chunk))
+
+				if time.Now().Sub(requestInfo.TimeLastRequested) >= ChunkRequestTimeoutDuration || !ok {
+					requestInfo.NumberOfTries++
+					if requestInfo.NumberOfTries >= MaxTriesPerChunk {
+						logger.Warn("Node %s is not responding.", nodeInfo.Address)
+						nodeInfo.Timeouts++
+						if nodeInfo.Timeouts >= MaxNodeTimeouts {
+							logger.Warn("Node %s has timed out 3 times. Removing it from file %s", nodeInfo.Address, file.FileName)
+							file.Nodes.Delete(nodeInfo.Address)
+						}
+					} else {
+						chunksToRequest[nodeInfo] = append(chunksToRequest[nodeInfo], uint16(chunk)) // Queue chunk
+					}
+				}
+			}
+		}
+
+		for nodeInfo, chunksToRequest := range chunksToRequest {
+			nodeAddr, _ := net.ResolveUDPAddr("udp4", nodeInfo.Address)
+			n.RequestChunks(chunksToRequest, nodeAddr, file, nodeInfo)
+		}
+	}
+}
+
+func (n *Node) RequestChunks(chunkIndexes []uint16, nodeAddr *net.UDPAddr, file *ForDownloadFile, nodeInfo *NodeInfo) {
+	if len(chunkIndexes) <= 0 {
+		return
+	}
+
+	logger.Info("Requesting %d chunks to %s", len(chunkIndexes), nodeAddr)
+	packet := protocol.NewRequestChunksPacket(file.FileName, chunkIndexes)
+	n.srv.EnqueueRequest(&packet, nodeAddr)
+
+	// Mark chunks as requested
+	for _, chunkIndex := range chunkIndexes {
+		file.MarkChunkAsRequested(chunkIndex, nodeInfo)
 	}
 }
 
