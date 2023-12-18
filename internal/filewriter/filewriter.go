@@ -29,11 +29,9 @@ type Chunk struct {
 	data  []uint8
 }
 
-func NewFileWriter(fileName string, fileSize uint64, onWrite func(index uint16), downloadsFolder string) (*FileWriter, error) {
-	path := downloadsFolder + fileName
-
+func NewFileWriter(fileName string, fileSize uint64, onWrite func(index uint16), filePath string) (*FileWriter, error) {
 	// Create sparse file
-	file, err := os.OpenFile(path, Flags, Permissions)
+	file, err := os.OpenFile(filePath, Flags, Permissions)
 	if err != nil {
 		return nil, err
 	}

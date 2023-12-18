@@ -72,11 +72,11 @@ func NewForDownloadFile(fileName string) *ForDownloadFile {
 	}
 }
 
-func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fileSize uint64, numberOfChunks uint16, downloadPath string) error {
+func (f *ForDownloadFile) SetData(fileHash [20]byte, chunkHashes [][20]byte, fileSize uint64, numberOfChunks uint16, downloadDirectory string) error {
 	f.FileHash = fileHash
 	f.FileSize = fileSize
-  f.FilePath = downloadPath + f.FileName
-	fileWriter, err := filewriter.NewFileWriter(f.FileName, fileSize, f.MarkChunkAsDownloaded, downloadPath)
+	f.FilePath = downloadDirectory + "/" + f.FileName
+	fileWriter, err := filewriter.NewFileWriter(f.FileName, fileSize, f.MarkChunkAsDownloaded, f.FilePath)
 	if err != nil {
 		return err
 	}

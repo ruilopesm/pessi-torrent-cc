@@ -4,6 +4,7 @@ import (
 	"PessiTorrent/internal/logger"
 	"PessiTorrent/internal/protocol"
 	"PessiTorrent/internal/utils"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -136,7 +137,7 @@ func (n *Node) status(_ []string) error {
 		})
 	}
 
-	logger.Info("Download path: %s", n.downloadPath)
+	logger.Info("Download directory path: %s", n.downloadDirectory)
 
 	return nil
 }
@@ -152,21 +153,19 @@ func (n *Node) removeFile(args []string) error {
 }
 
 // path <path>
-func (n *Node) setDownloadPath(args []string) error {
+func (n *Node) setDownloadDirectory(args []string) error {
 	path := args[0]
 
-	_, err := os.Stat(path)
+	stats, err := os.Stat(path)
 	if err != nil {
-		logger.Info("Path %s does not exist", path)
 		return err
 	}
 
-	// verify if path has a trailing slash
-	if path[len(path)-1] != '/' {
-		path += "/"
+	if !stats.IsDir() {
+		return fmt.Errorf("path %s is not a directory", path)
 	}
 
-	n.downloadPath = path
+	n.downloadDirectory = path
 
 	return nil
 }
