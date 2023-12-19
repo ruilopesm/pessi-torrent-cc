@@ -77,7 +77,7 @@ func (n *Node) handleAnswerFileWithNodesPacket(packet *protocol.AnswerFileWithNo
 		localIpAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
 
 		if n.udpPort != node.Port || localIpAddr != [4]byte(ipAddr.IP) { // Do not add itself to the list of nodes
-			forDownloadFile.AddNode(&udpAddr, node.Bitfield)
+			forDownloadFile.UpsertNode(&udpAddr, node.Bitfield)
 		}
 	}
 
@@ -109,7 +109,7 @@ func (n *Node) handleAnswerNodesPacket(packet *protocol.AnswerNodesPacket, conn 
 		localIpAddr := utils.TCPAddrToBytes(n.conn.LocalAddr())
 
 		if n.udpPort != node.Port || localIpAddr != [4]byte(ipAddr.IP) { // Do not add itself to the list of nodes
-			forDownloadFile.AddNode(&udpAddr, node.Bitfield)
+			forDownloadFile.UpsertNode(&udpAddr, node.Bitfield)
 		}
 	}
 

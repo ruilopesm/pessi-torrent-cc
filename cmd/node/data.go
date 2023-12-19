@@ -105,7 +105,13 @@ func (f *ForDownloadFile) IsFileDownloaded() bool {
 	return f.LengthOfMissingChunks() == 0
 }
 
-func (f *ForDownloadFile) AddNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
+func (f *ForDownloadFile) UpsertNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
+	if nodeInfo, ok := f.Nodes.Get(nodeAddr.String()); ok {
+		f.updateNode(nodeInfo, bitfield)
+	} else {
+		f.addNode(nodeAddr, bitfield)
+	}
+
 	nodeInfo := NodeInfo{
 		Address: nodeAddr.String(),
 		Chunks:  structures.NewSynchronizedMap[uint16, *RequestInfo](),
@@ -119,6 +125,33 @@ func (f *ForDownloadFile) AddNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
 	}
 
 	f.Nodes.Put(nodeAddr.String(), &nodeInfo)
+}
+
+func (f *ForDownloadFile) addNode(nodeAddr *net.UDPAddr, bitfield []uint8) {
+	nodeInfo := NodeInfo{
+		Address: nodeAddr.String(),
+		Chunks:  structures.NewSynchronizedMap[uint16, *RequestInfo](),
+	}
+
+	decoded := protocol.DecodeBitField(bitfield)
+	for index, hasChunk := range decoded {
+		if hasChunk {
+			nodeInfo.Chunks.Put(uint16(index), &RequestInfo{TimeLastRequested: time.Time{}})
+		}
+	}
+
+	f.Nodes.Put(nodeAddr.String(), &nodeInfo)
+}
+
+func (f *ForDownloadFile) updateNode(nodeInfo *NodeInfo, bitfield []uint8) {
+	decoded := protocol.DecodeBitField(bitfield)
+	for index, hasChunk := range decoded {
+		if hasChunk {
+			nodeInfo.Chunks.Put(uint16(index), &RequestInfo{TimeLastRequested: time.Time{}})
+		} else {
+			nodeInfo.Chunks.Delete(uint16(index))
+		}
+	}
 }
 
 func (f *ForDownloadFile) MarkChunkAsRequested(chunkIndex uint16, nodeInfo *NodeInfo) {
