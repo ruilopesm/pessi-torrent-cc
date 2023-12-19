@@ -28,6 +28,18 @@ COPY ./config/config.coreemu.yml /config/config.yml
 COPY ./topologies /topologies
 COPY bin/dns /dns
 
+RUN mkdir /downloads-1
+RUN mkdir /downloads-2
+RUN mkdir /downloads-3
+RUN mkdir /downloads-4
+RUN mkdir /downloads-5
+
+RUN mkdir files
+RUN fallocate -l 10M files/10M.file
+RUN fallocate -l 100M files/100M.file
+RUN fallocate -l 500M files/500M.file
+RUN fallocate -l 1G files/1G.file
+
 # Install add-apt-repository command
 RUN apt-get -qqqy update
 RUN apt-get -qqqy dist-upgrade
