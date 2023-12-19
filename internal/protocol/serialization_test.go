@@ -85,7 +85,7 @@ func TestSerialize(t *testing.T) {
 	// create dummy AnswerNodesPacket
 	answerNodesPacket := NewAnswerFileWithNodesPacket("filename.txt", 5, [20]byte{1, 2, 3, 4, 5}, [][20]byte{{6, 7, 8}, {9, 10, 11}}, []string{"portatil1.local"}, []uint16{1, 2, 3, 4, 5}, []Bitfield{EncodeBitField([]bool{true, true, true, true, true})})
 
-	var deserializeAnswerNodes AnswerNodesPacket
+	var deserializeAnswerNodes AnswerFileWithNodesPacket
 	testSerializeStruct(&answerNodesPacket, &deserializeAnswerNodes, t)
 	checkEquals(answerNodesPacket, deserializeAnswerNodes, t)
 }
