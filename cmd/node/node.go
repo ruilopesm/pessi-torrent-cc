@@ -209,7 +209,10 @@ func (n *Node) tick() {
 				chunk := missingChunks[0]
 				missingChunks = missingChunks[1:] // Pop first element
 
-				requestInfo, _ := nodeInfo.Chunks.Get(uint16(chunk))
+				requestInfo, hasChunk := nodeInfo.Chunks.Get(uint16(chunk))
+				if !hasChunk {
+					continue
+				}
 
 				lastRequested, ok := file.PendingChunks.Get(uint16(chunk)) // Check if chunk has already been requested
 				if ok && time.Now().Sub(lastRequested) < ChunkRequestTimeoutDuration {
