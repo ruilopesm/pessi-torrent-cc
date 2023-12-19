@@ -60,7 +60,11 @@ func (n *Node) handleAnswerFileWithNodesPacket(packet *protocol.AnswerFileWithNo
 	forDownloadFile.UpdatedByTracker = true
 
 	for _, node := range packet.Nodes {
-		ipAddrStr, _ := n.dns.ResolveIP(node.Name)
+		ipAddrStr, err := n.dns.ResolveIP(node.Name)
+		if err != nil {
+			logger.Error("Error resolving dns ip address on %s: %v", node.Name, err)
+			continue
+		}
 		ipAddrStr = ipAddrStr + ":" + strconv.Itoa(int(node.Port))
 		ipAddr, err := net.ResolveUDPAddr("udp", ipAddrStr)
 
