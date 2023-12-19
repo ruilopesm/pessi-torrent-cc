@@ -34,11 +34,11 @@ RUN mkdir /downloads-3
 RUN mkdir /downloads-4
 RUN mkdir /downloads-5
 
-RUN mkdir files
-RUN fallocate -l 10M files/10M.file
-RUN fallocate -l 100M files/100M.file
-RUN fallocate -l 500M files/500M.file
-RUN fallocate -l 1G files/1G.file
+RUN mkdir /files
+RUN fallocate -l 10M /files/10M.file
+RUN fallocate -l 100M /files/100M.file
+RUN fallocate -l 500M /files/500M.file
+RUN fallocate -l 1G /files/1G.file
 
 # Install add-apt-repository command
 RUN apt-get -qqqy update
