@@ -65,7 +65,10 @@ func (t *Tracker) acceptConnections() {
 			continue
 		}
 
-		conn := transport.NewTCPConnection(cn, t.HandlePackets, func() {})
+		conn := transport.NewTCPConnection(cn, t.HandlePackets, func() {
+			logger.Info("Node %s disconnected", cn.RemoteAddr())
+			t.nodes.Delete(cn.RemoteAddr().String())
+		})
 		logger.Info("Node %s connected", conn.RemoteAddr())
 
 		go conn.Start()
