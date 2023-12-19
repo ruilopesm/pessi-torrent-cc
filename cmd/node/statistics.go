@@ -40,7 +40,7 @@ func (stats *NodeStatistics) getAverageDownloadSpeed(addr string) float64 {
 	var speedCount int
 
 	for _, chunk := range downloadedChunks {
-		if time.Now().Sub(chunk.TimestampReceived) < RelevantTimeForDownloadSpeedCalculation {
+		if time.Since(chunk.TimestampReceived) < RelevantTimeForDownloadSpeedCalculation {
 			downloadTime := chunk.getDownloadTime()
 			totalSpeed += float64(chunk.ChunkSize) / downloadTime.Seconds()
 			speedCount++

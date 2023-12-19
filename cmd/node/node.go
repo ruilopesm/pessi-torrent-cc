@@ -161,7 +161,7 @@ func (n *Node) tick() {
 			continue
 		}
 
-		if time.Now().Sub(file.LastServerChunksUpdate) > UpdateServerChunksInterval || file.IsFileDownloaded() {
+		if time.Since(file.LastServerChunksUpdate) > UpdateServerChunksInterval || file.IsFileDownloaded() {
 			file.LastServerChunksUpdate = time.Now()
 			n.updateServerChunks(file)
 			logger.Info("Sent update chunks packet to tracker for file %s", fileName)
@@ -215,7 +215,7 @@ func (n *Node) tick() {
 				}
 
 				lastRequested, ok := file.PendingChunks.Get(uint16(chunk)) // Check if chunk has already been requested
-				if ok && time.Now().Sub(lastRequested) < ChunkRequestTimeoutDuration {
+				if ok && time.Since(lastRequested) < ChunkRequestTimeoutDuration {
 					continue
 				}
 
